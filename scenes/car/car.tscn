@@ -1,0 +1,40 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/car/car.gd" id="1_car"]
+
+[sub_resource type="RectangleShape2D" id="body_shape"]
+size = Vector2(26, 48)
+
+[sub_resource type="RectangleShape2D" id="ram_shape"]
+size = Vector2(38, 66)
+
+[sub_resource type="CircleShape2D" id="interact_shape"]
+radius = 30.0
+
+[node name="Car" type="CharacterBody2D"]
+collision_layer = 4
+collision_mask = 69
+motion_mode = 1
+script = ExtResource("1_car")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(2, 2)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("body_shape")
+
+[node name="RamArea" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 8
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="RamArea"]
+shape = SubResource("ram_shape")
+
+[node name="InteractZone" type="Area2D" parent="."]
+collision_layer = 16
+collision_mask = 0
+monitoring = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="InteractZone"]
+shape = SubResource("interact_shape")

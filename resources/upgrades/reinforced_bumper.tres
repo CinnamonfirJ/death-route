@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="UpgradeDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/meta/upgrade_def.gd" id="1_vvq21"]
+
+[resource]
+script = ExtResource("1_vvq21")
+id = &"reinforced_bumper"
+display_name = "Reinforced Bumper"
+description = "Steel ram plate bolted to the front. More ram damage."
+icon_item = "steel"
+stat = &"car.ram_mult"
+per_level = 0.25

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CarStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/car/car_stats.gd" id="1_6in12"]
+[ext_resource type="Texture2D" path="res://assets/vehicles/car1.png" id="2_qad8r"]
+
+[resource]
+script = ExtResource("1_6in12")
+display_name = "Muscle Red"
+sprite = ExtResource("2_qad8r")
+max_hp = 85.0
+top_speed = 405.0
+acceleration = 660.0
+turn_rate = 3.4899999999999998
+ram_mult = 1.1
+fuel_capacity = 80.0

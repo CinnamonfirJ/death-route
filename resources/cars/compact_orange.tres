@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="CarStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/car/car_stats.gd" id="1_s8r27"]
+[ext_resource type="Texture2D" path="res://assets/vehicles/car4.png" id="2_iamsb"]
+
+[resource]
+script = ExtResource("1_s8r27")
+display_name = "Compact Orange"
+sprite = ExtResource("2_iamsb")
+top_speed = 345.0
+turn_rate = 3.4
+fuel_capacity = 90.0

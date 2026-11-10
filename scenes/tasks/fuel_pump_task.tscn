@@ -1,0 +1,36 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/tasks/fuel_pump_task.gd" id="1_pump"]
+
+[sub_resource type="RectangleShape2D" id="body_shape"]
+size = Vector2(36, 22)
+
+[sub_resource type="CircleShape2D" id="interact_shape"]
+radius = 30.0
+
+[node name="FuelPumpTask" type="StaticBody2D"]
+collision_layer = 1
+collision_mask = 0
+script = ExtResource("1_pump")
+task_name = "Repair fuel pump"
+duration = 6.0
+noise_per_sec = 5.0
+completion_noise = 25.0
+reward_scrap = 30
+broken_region = "pump_broken"
+fixed_region = "pump_working"
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, -6)
+shape = SubResource("body_shape")
+
+[node name="InteractZone" type="Area2D" parent="."]
+collision_layer = 16
+collision_mask = 0
+monitoring = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="InteractZone"]
+position = Vector2(0, -6)
+shape = SubResource("interact_shape")

@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="WeaponStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/weapons/weapon_stats.gd" id="1_ws"]
+
+[resource]
+script = ExtResource("1_ws")
+weapon_id = &"shotgun"
+display_name = "Shotgun"
+damage = 9.0
+pellets = 7
+spread_deg = 22.0
+weapon_range = 200.0
+bullet_radius = 4.0
+knockback = 70.0
+fire_interval = 0.75
+automatic = false
+mag_size = 6
+start_reserve = 24
+reload_time = 1.8
+noise_per_shot = 18.0
+durability_loss_per_shot = 0.012

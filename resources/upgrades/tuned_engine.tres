@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="UpgradeDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/meta/upgrade_def.gd" id="1_qd2jw"]
+
+[resource]
+script = ExtResource("1_qd2jw")
+id = &"tuned_engine"
+display_name = "Tuned Engine"
+description = "Higher top speed and acceleration."
+icon_item = "repair_tools"
+stat = &"car.speed"
+per_level = 0.08
+base_cost = 50

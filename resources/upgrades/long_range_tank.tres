@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="UpgradeDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/meta/upgrade_def.gd" id="1_qp6o3"]
+
+[resource]
+script = ExtResource("1_qp6o3")
+id = &"long_range_tank"
+display_name = "Long-Range Tank"
+description = "Bigger fuel tank."
+icon_item = "fuel_can"
+stat = &"car.fuel_capacity"
+per_level = 0.25
+max_level = 2
+base_cost = 35

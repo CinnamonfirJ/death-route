@@ -1,0 +1,18 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/props/explosive_barrel.gd" id="1_barrel"]
+
+[sub_resource type="RectangleShape2D" id="shape"]
+size = Vector2(14, 10)
+
+[node name="ExplosiveBarrel" type="StaticBody2D"]
+collision_layer = 129
+collision_mask = 0
+script = ExtResource("1_barrel")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+offset = Vector2(0, -26)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, -4)
+shape = SubResource("shape")

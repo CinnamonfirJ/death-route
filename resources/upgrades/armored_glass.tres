@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="UpgradeDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/meta/upgrade_def.gd" id="1_8hs4g"]
+
+[resource]
+script = ExtResource("1_8hs4g")
+id = &"armored_glass"
+display_name = "Armored Glass"
+description = "Latchers can't chew through as fast."
+icon_item = "armor_vest"
+stat = &"car.latch_resist"
+mode = 1
+per_level = 0.15
+base_cost = 45

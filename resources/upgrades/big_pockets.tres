@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="UpgradeDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/meta/upgrade_def.gd" id="1_kn58i"]
+
+[resource]
+script = ExtResource("1_kn58i")
+id = &"big_pockets"
+display_name = "Big Pockets"
+description = "Larger inventory: carry more spare ammo."
+category = 2
+icon_item = "military_bag"
+stat = &"player.ammo_reserve"
+per_level = 0.5
+max_level = 2
+base_cost = 35

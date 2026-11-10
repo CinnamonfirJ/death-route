@@ -1,0 +1,14 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# Exported builds and itch.io packages (rebuild with the commands in BUILD.md)
+/build/
+
+# Local tool settings (machine-specific paths)
+/.claude/
+
+# OS / editor clutter
+.DS_Store
+Thumbs.db
+*.tmp

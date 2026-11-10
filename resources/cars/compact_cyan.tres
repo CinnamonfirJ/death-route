@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="CarStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/car/car_stats.gd" id="1_12adb"]
+[ext_resource type="Texture2D" path="res://assets/vehicles/car7.png" id="2_r6jdt"]
+
+[resource]
+script = ExtResource("1_12adb")
+display_name = "Compact Cyan"
+sprite = ExtResource("2_r6jdt")
+top_speed = 338.0
+acceleration = 555.0
+turn_rate = 3.4

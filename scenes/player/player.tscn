@@ -1,0 +1,82 @@
+[gd_scene load_steps=12 format=3]
+
+[ext_resource type="Script" path="res://scripts/player/flashlight.gd" id="9_flash"]
+
+[ext_resource type="Script" path="res://scripts/player/player.gd" id="1_player"]
+[ext_resource type="Script" path="res://scripts/player/state_machine.gd" id="2_sm"]
+[ext_resource type="Script" path="res://scripts/player/states/on_foot_state.gd" id="3_onfoot"]
+[ext_resource type="Script" path="res://scripts/player/states/driving_state.gd" id="4_driving"]
+[ext_resource type="Script" path="res://scripts/player/states/dead_state.gd" id="5_dead"]
+[ext_resource type="Script" path="res://scripts/player/states/tasking_state.gd" id="6_tasking"]
+[ext_resource type="Script" path="res://scripts/weapons/weapon.gd" id="7_weapon"]
+[ext_resource type="Resource" path="res://resources/weapons/pistol.tres" id="8_pistol"]
+
+[sub_resource type="CircleShape2D" id="body_shape"]
+radius = 6.0
+
+[sub_resource type="CircleShape2D" id="reach_shape"]
+radius = 14.0
+
+[node name="Player" type="CharacterBody2D"]
+collision_layer = 2
+collision_mask = 13
+motion_mode = 1
+script = ExtResource("1_player")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+offset = Vector2(0, -14)
+
+[node name="Weapon" type="Node2D" parent="."]
+position = Vector2(0, -11)
+script = ExtResource("7_weapon")
+stats = ExtResource("8_pistol")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="Weapon"]
+offset = Vector2(7, 0)
+
+[node name="Flashlight" type="Node2D" parent="."]
+position = Vector2(0, -11)
+script = ExtResource("9_flash")
+
+[node name="Beam" type="Polygon2D" parent="Flashlight"]
+z_index = 6
+color = Color(1, 0.95, 0.7, 0.18)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, -4)
+shape = SubResource("body_shape")
+
+[node name="InteractArea" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 16
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="InteractArea"]
+position = Vector2(0, -8)
+shape = SubResource("reach_shape")
+
+[node name="InteractZone" type="Area2D" parent="."]
+collision_layer = 16
+collision_mask = 0
+monitoring = false
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="InteractZone"]
+position = Vector2(0, -8)
+shape = SubResource("reach_shape")
+
+[node name="StateMachine" type="Node" parent="." node_paths=PackedStringArray("initial_state")]
+script = ExtResource("2_sm")
+initial_state = NodePath("OnFoot")
+
+[node name="OnFoot" type="Node" parent="StateMachine"]
+script = ExtResource("3_onfoot")
+
+[node name="Driving" type="Node" parent="StateMachine"]
+script = ExtResource("4_driving")
+
+[node name="Tasking" type="Node" parent="StateMachine"]
+script = ExtResource("6_tasking")
+
+[node name="Dead" type="Node" parent="StateMachine"]
+script = ExtResource("5_dead")

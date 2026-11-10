@@ -1,0 +1,211 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1_hud"]
+[ext_resource type="Script" path="res://scripts/ui/waypoint_overlay.gd" id="2_wp"]
+[ext_resource type="Script" path="res://scripts/ui/touch_controls.gd" id="3_touch"]
+[ext_resource type="Script" path="res://scripts/ui/pause_menu.gd" id="4_pause"]
+
+[node name="HUD" type="CanvasLayer"]
+script = ExtResource("1_hud")
+
+[node name="Waypoints" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("2_wp")
+
+[node name="TopLeft" type="VBoxContainer" parent="."]
+offset_left = 8.0
+offset_top = 6.0
+offset_right = 158.0
+offset_bottom = 120.0
+theme_override_constants/separation = 1
+
+[node name="HPLabel" type="Label" parent="TopLeft"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+text = "HANDYMAN"
+
+[node name="PlayerHP" type="ProgressBar" parent="TopLeft"]
+unique_name_in_owner = true
+self_modulate = Color(1, 0.35, 0.35, 1)
+custom_minimum_size = Vector2(120, 7)
+layout_mode = 2
+value = 100.0
+show_percentage = false
+
+[node name="Party" type="Label" parent="TopLeft"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.85, 0.95, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 8
+
+[node name="CarPanel" type="VBoxContainer" parent="TopLeft"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 1
+
+[node name="CarName" type="Label" parent="TopLeft/CarPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+text = "CAR"
+
+[node name="CarHP" type="ProgressBar" parent="TopLeft/CarPanel"]
+unique_name_in_owner = true
+self_modulate = Color(1, 0.65, 0.25, 1)
+custom_minimum_size = Vector2(120, 7)
+layout_mode = 2
+value = 100.0
+show_percentage = false
+
+[node name="FuelLabel" type="Label" parent="TopLeft/CarPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+text = "FUEL"
+
+[node name="Fuel" type="ProgressBar" parent="TopLeft/CarPanel"]
+unique_name_in_owner = true
+self_modulate = Color(1, 0.9, 0.3, 1)
+custom_minimum_size = Vector2(120, 7)
+layout_mode = 2
+value = 100.0
+show_percentage = false
+
+[node name="Speed" type="Label" parent="TopLeft/CarPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "0 km/h"
+
+[node name="TopRight" type="VBoxContainer" parent="."]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -158.0
+offset_top = 24.0
+offset_right = -8.0
+offset_bottom = 110.0
+grow_horizontal = 0
+theme_override_constants/separation = 1
+
+[node name="Scrap" type="Label" parent="TopRight"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.4, 1)
+theme_override_font_sizes/font_size = 11
+text = "Scrap: 0"
+horizontal_alignment = 2
+
+[node name="NoiseLabel" type="Label" parent="TopRight"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 9
+text = "NOISE"
+horizontal_alignment = 2
+
+[node name="NoiseBar" type="ProgressBar" parent="TopRight"]
+unique_name_in_owner = true
+self_modulate = Color(0.6, 0.85, 1, 1)
+custom_minimum_size = Vector2(120, 7)
+layout_mode = 2
+show_percentage = false
+
+[node name="Ammo" type="Label" parent="TopRight"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "12 / 48"
+horizontal_alignment = 2
+
+[node name="Objective" type="Label" parent="TopRight"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.4, 1)
+theme_override_font_sizes/font_size = 9
+horizontal_alignment = 2
+autowrap_mode = 2
+
+[node name="Kills" type="Label" parent="."]
+unique_name_in_owner = true
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -90.0
+offset_top = 6.0
+offset_right = -8.0
+offset_bottom = 22.0
+grow_horizontal = 0
+theme_override_font_sizes/font_size = 11
+text = "Kills: 0"
+horizontal_alignment = 2
+
+[node name="Prompt" type="Label" parent="."]
+unique_name_in_owner = true
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -160.0
+offset_top = -44.0
+offset_right = 160.0
+offset_bottom = -28.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 11
+horizontal_alignment = 1
+
+[node name="Controls" type="Label" parent="."]
+modulate = Color(1, 1, 1, 0.6)
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = -18.0
+offset_right = 632.0
+offset_bottom = -4.0
+grow_vertical = 0
+theme_override_font_sizes/font_size = 8
+text = "WASD move/drive · Shift sprint · LMB shoot · R reload · E interact/hold · F flashlight · Space handbrake · Q shove"
+
+[node name="Message" type="Label" parent="."]
+unique_name_in_owner = true
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -150.0
+offset_top = -30.0
+offset_right = 150.0
+offset_bottom = 30.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.9, 0.2, 0.2, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 20
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="TouchControls" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("3_touch")
+
+[node name="PauseMenu" type="CanvasLayer" parent="."]
+script = ExtResource("4_pause")

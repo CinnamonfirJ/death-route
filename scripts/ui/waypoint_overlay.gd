@@ -1,0 +1,113 @@
+extends Control
+## Draws a marker over each waypoint target: a bobbing tag when on screen,
+## an edge arrow with distance when off screen. Fed by EventBus.waypoint_set/cleared.
+
+const EDGE_MARGIN := 18.0
+## World px per displayed metre.
+const PX_PER_M := 16.0
+
+var _targets: Dictionary = {}   # Node2D -> label
+
+
+func _ready() -> void:
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	set_anchors_preset(Control.PRESET_FULL_RECT)
+	EventBus.waypoint_set.connect(func(t: Node2D, label: String) -> void: _targets[t] = label)
+	EventBus.waypoint_cleared.connect(func(t: Node2D) -> void: _targets.erase(t))
+
+
+func _process(_delta: float) -> void:
+	queue_redraw()
+
+
+func _draw() -> void:
+	var view := get_viewport_rect()
+	var to_screen := get_viewport().get_canvas_transform()
+	var player := Net.local_player() as Node2D
+	var font := get_theme_default_font()
+	_draw_lock_on(to_screen, player)
+	var used: Array[Vector2] = []  # edge arrows already drawn this frame
+	for target in _targets.keys():
+		if not is_instance_valid(target):
+			_targets.erase(target)
+			continue
+		var label: String = _targets[target]
+		var screen: Vector2 = to_screen * (target.global_position + Vector2(0, -40))
+		var inner := view.grow(-EDGE_MARGIN)
+		var color := Color(1.0, 0.85, 0.3)
+		if inner.has_point(screen):
+			var bob := sin(Time.get_ticks_msec() * 0.006) * 2.0
+			var tip := screen + Vector2(0, bob)
+			draw_colored_polygon(PackedVector2Array([tip, tip + Vector2(-5, -8), tip + Vector2(5, -8)]), color)
+			draw_string_outline(font, tip + Vector2(-20, -11), label, HORIZONTAL_ALIGNMENT_CENTER, 40, 9, 3, Color.BLACK)
+			draw_string(font, tip + Vector2(-20, -11), label, HORIZONTAL_ALIGNMENT_CENTER, 40, 9, color)
+			continue
+		var center := view.get_center()
+		var dir := (screen - center).normalized()
+		var edge := _avoid_hud(_clamp_to_rect(center, dir, inner))
+		# Arrows sharing a spot (same direction, or pushed below the HUD) stack downward.
+		var moved := true
+		while moved:
+			moved = false
+			for u in used:
+				if u.distance_to(edge) < 16.0:
+					edge.y = u.y + 16.0
+					moved = true
+		used.append(edge)
+		var ang := dir.angle()
+		var tri := PackedVector2Array([
+			edge + Vector2(9, 0).rotated(ang),
+			edge + Vector2(-5, -6).rotated(ang),
+			edge + Vector2(-5, 6).rotated(ang)])
+		draw_colored_polygon(tri, color)
+		var dist := 0
+		if player:
+			dist = roundi(player.global_position.distance_to(target.global_position) / PX_PER_M)
+		var text := "%s %dm" % [label, dist]
+		var text_pos := edge - dir * 22.0 + Vector2(-30, 3)
+		draw_string_outline(font, text_pos, text, HORIZONTAL_ALIGNMENT_CENTER, 60, 9, 3, Color.BLACK)
+		draw_string(font, text_pos, text, HORIZONTAL_ALIGNMENT_CENTER, 60, 9, color)
+
+
+## Auto-aim lock: small corner brackets around the zombie you'll hit.
+func _draw_lock_on(to_screen: Transform2D, player: Node2D) -> void:
+	if player == null or not player.visible or not player.is_on_foot():
+		return
+	var t = player.aim_target
+	if t == null or not is_instance_valid(t) or t.is_dead:
+		return
+	var c: Vector2 = to_screen * (t.global_position + Vector2(0, -12))
+	var r := 9.0
+	var l := 4.0
+	var col := Color(1.0, 0.35, 0.3, 0.85)
+	for sx in [-1.0, 1.0]:
+		for sy in [-1.0, 1.0]:
+			var corner := c + Vector2(sx * r, sy * r)
+			draw_line(corner, corner - Vector2(sx * l, 0), col, 1.5)
+			draw_line(corner, corner - Vector2(0, sy * l), col, 1.5)
+
+
+## Edge arrows that would land on a HUD panel slide down to just below it.
+func _avoid_hud(p: Vector2) -> Vector2:
+	for panel_name in [^"TopLeft", ^"TopRight"]:
+		var panel := get_parent().get_node_or_null(panel_name) as Control
+		if panel == null or not panel.visible:
+			continue
+		var r := panel.get_global_rect().grow(8.0)
+		if r.has_point(p):
+			p.y = r.end.y + 6.0
+	return p
+
+
+## Where a ray from `origin` along `dir` leaves `rect`.
+func _clamp_to_rect(origin: Vector2, dir: Vector2, rect: Rect2) -> Vector2:
+	var t := INF
+	if dir.x > 0.0:
+		t = minf(t, (rect.end.x - origin.x) / dir.x)
+	elif dir.x < 0.0:
+		t = minf(t, (rect.position.x - origin.x) / dir.x)
+	if dir.y > 0.0:
+		t = minf(t, (rect.end.y - origin.y) / dir.y)
+	elif dir.y < 0.0:
+		t = minf(t, (rect.position.y - origin.y) / dir.y)
+	return origin + dir * t

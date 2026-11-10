@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="CarStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/car/car_stats.gd" id="1_8ljqx"]
+[ext_resource type="Texture2D" path="res://assets/vehicles/car11.png" id="2_byibc"]
+
+[resource]
+script = ExtResource("1_8ljqx")
+display_name = "Armored Black"
+sprite = ExtResource("2_byibc")
+max_hp = 180.0
+latch_resist = 0.5
+top_speed = 285.0
+acceleration = 420.0
+turn_rate = 2.92
+ram_mult = 1.5
+fuel_capacity = 110.0

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="UpgradeDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/meta/upgrade_def.gd" id="1_kss8l"]
+
+[resource]
+script = ExtResource("1_kss8l")
+id = &"muffled_barrel"
+display_name = "Muffled Barrel"
+description = "Shots make less noise."
+category = 1
+icon_item = "ammo_sniper"
+stat = &"weapon.noise"
+per_level = -0.15
+base_cost = 50

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CarStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/car/car_stats.gd" id="1_i4ajh"]
+[ext_resource type="Texture2D" path="res://assets/vehicles/car13.png" id="2_s3b82"]
+
+[resource]
+script = ExtResource("1_i4ajh")
+display_name = "Sports Green"
+sprite = ExtResource("2_s3b82")
+max_hp = 70.0
+top_speed = 465.0
+acceleration = 750.0
+turn_rate = 3.58
+ram_mult = 0.9
+fuel_capacity = 70.0

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="UpgradeDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/meta/upgrade_def.gd" id="1_7ph2r"]
+
+[resource]
+script = ExtResource("1_7ph2r")
+id = &"quick_hands"
+display_name = "Quick Hands"
+description = "Finish repairs and jobs faster."
+category = 2
+icon_item = "repair_tools"
+stat = &"player.task_speed"
+per_level = 0.2

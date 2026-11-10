@@ -1,0 +1,291 @@
+{
+  "meta": {
+    "version": 1,
+    "generated": "2026-11-09",
+    "sources": {
+      "zombie_pack": "C:/Users/JESSE/Downloads/UPDATE 2_ZombiePack/UPDATE 2_ZombiePack",
+      "cars": "C:/Users/JESSE/Downloads/cars"
+    },
+    "licenses": {
+      "zombie_pack": "Custom license by Aymen B (@PixRogueKnight). Commercial use OK, credit appreciated. Do not redistribute as a standalone asset pack; no NFT or AI-generator use.",
+      "cars": "CC BY 4.0. Credit REQUIRED: \"Racing Cars by Ibrahim Smati (itch.io/@ibrahim-smati)\""
+    },
+    "notes": [
+      "Animation sheets are horizontal strips: frames = image_width / frame_width.",
+      "Characters are drawn front-facing (3/4 view), not rotated top-down. Face direction with flip_h and aim by rotating the weapon sprite.",
+      "Cars are true top-down with the nose pointing UP (-Y). Rotate the Sprite2D by +PI/2 if the car body treats +X as forward.",
+      "Only 4 zombie bodies exist for 4 bestiary types. Stopper and Brute get scale and modulate tints to read as heavier.",
+      "Files were copied into res://assets with snake_case names. 'src' keeps the original filename for traceability."
+    ]
+  },
+
+  "characters": {
+    "player_handyman": {
+      "role": "Player character (Handyman / delivery driver)",
+      "frame_size": [32, 32],
+      "animations": {
+        "idle":    { "res": "res://assets/characters/player/idle.png",    "src": "zombie_pack/AnimationSheets/Player_Character_32x32/Player_idle.png",    "frames": 6, "fps": 8,  "loop": true },
+        "run":     { "res": "res://assets/characters/player/run.png",     "src": "zombie_pack/AnimationSheets/Player_Character_32x32/Player_run.png",     "frames": 8, "fps": 12, "loop": true },
+        "hit":     { "res": "res://assets/characters/player/hit.png",     "src": "zombie_pack/AnimationSheets/Player_Character_32x32/Player_Hit .png",    "frames": 3, "fps": 12, "loop": false },
+        "knocked": { "res": "res://assets/characters/player/knocked.png", "src": "zombie_pack/AnimationSheets/Player_Character_32x32/Player_knocked.png", "frames": 6, "fps": 10, "loop": false },
+        "death":   { "res": "res://assets/characters/player/death.png",   "src": "zombie_pack/AnimationSheets/Player_Character_32x32/Player_Death .png",  "frames": 8, "fps": 10, "loop": false }
+      }
+    },
+
+    "zombie_walker": {
+      "role": "Walker (weak). Slow, low HP, dies instantly to ramming.",
+      "frame_size": [32, 32], "scale": 1.0, "tint": "#ffffff",
+      "animations": {
+        "idle":    { "res": "res://assets/characters/zombie_walker/idle.png",    "src": "zombie_pack/AnimationSheets/Zombie_Character_32x32/Zombie1/Zombie_Idle.png",     "frames": 6, "fps": 6,  "loop": true },
+        "run":     { "res": "res://assets/characters/zombie_walker/run.png",     "src": "zombie_pack/AnimationSheets/Zombie_Character_32x32/Zombie1/Zombie_run.png",      "frames": 8, "fps": 8,  "loop": true },
+        "hit":     { "res": "res://assets/characters/zombie_walker/hit.png",     "src": "zombie_pack/AnimationSheets/Zombie_Character_32x32/Zombie1/Zombie_Hit.png",      "frames": 3, "fps": 12, "loop": false },
+        "knocked": { "res": "res://assets/characters/zombie_walker/knocked.png", "src": "zombie_pack/AnimationSheets/Zombie_Character_32x32/Zombie1/Zombie_knocked .png", "frames": 6, "fps": 10, "loop": false },
+        "death":   { "res": "res://assets/characters/zombie_walker/death_1.png", "src": "zombie_pack/AnimationSheets/Zombie_Character_32x32/Zombie1/Zombie_Death 1.png",  "frames": 8, "fps": 10, "loop": false },
+        "death_alt": { "res": "res://assets/characters/zombie_walker/death_2.png", "src": "zombie_pack/AnimationSheets/Zombie_Character_32x32/Zombie1/Zombie_Death 2 .png", "frames": 8, "fps": 10, "loop": false }
+      }
+    },
+
+    "zombie_latcher": {
+      "role": "Latcher. Jumps onto the car and chips HP. Counter: mash, handbrake, or shoot off.",
+      "frame_size": [32, 32], "scale": 0.9, "tint": "#ffffff",
+      "animations": {
+        "idle":    { "res": "res://assets/characters/zombie_latcher/idle.png",    "src": "zombie_pack/AnimationSheets/Zombie_Character_32x32/Zombie2/Zombie 2_Idle.png",     "frames": 6, "fps": 8,  "loop": true },
+        "run":     { "res": "res://assets/characters/zombie_latcher/run.png",     "src": "zombie_pack/AnimationSheets/Zombie_Character_32x32/Zombie2/Zombie 2_Run.png",      "frames": 8, "fps": 14, "loop": true },
+        "hit":     { "res": "res://assets/characters/zombie_latcher/hit.png",     "src": "zombie_pack/AnimationSheets/Zombie_Character_32x32/Zombie2/Zombie 2_Hit.png",      "frames": 3, "fps": 12, "loop": false },
+        "knocked": { "res": "res://assets/characters/zombie_latcher/knocked.png", "src": "zombie_pack/AnimationSheets/Zombie_Character_32x32/Zombie2/Zombie 2_knocked.png",  "frames": 6, "fps": 10, "loop": false },
+        "death":   { "res": "res://assets/characters/zombie_latcher/death_1.png", "src": "zombie_pack/AnimationSheets/Zombie_Character_32x32/Zombie2/Zombie 2_Death 1 .png", "frames": 8, "fps": 10, "loop": false },
+        "death_alt": { "res": "res://assets/characters/zombie_latcher/death_2.png", "src": "zombie_pack/AnimationSheets/Zombie_Character_32x32/Zombie2/Zombie 2_ Death 2 .png", "frames": 8, "fps": 10, "loop": false }
+      }
+    },
+
+    "zombie_stopper": {
+      "role": "Stopper (heavy). Stands in the road and halts the car. Counter: bait into obstacles or handbrake-drift past.",
+      "frame_size": [32, 32], "scale": 1.3, "tint": "#c8c8d8",
+      "animations": {
+        "idle":    { "res": "res://assets/characters/zombie_stopper/idle.png",    "src": "zombie_pack/AnimationSheets/Zombie_Character_32x32/Zombie4/Zombie 4_idle.png",     "frames": 6, "fps": 5,  "loop": true },
+        "run":     { "res": "res://assets/characters/zombie_stopper/run.png",     "src": "zombie_pack/AnimationSheets/Zombie_Character_32x32/Zombie4/Zombie 4_run.png",      "frames": 8, "fps": 6,  "loop": true },
+        "hit":     { "res": "res://assets/characters/zombie_stopper/hit.png",     "src": "zombie_pack/AnimationSheets/Zombie_Character_32x32/Zombie4/Zombie 4_hit.png",      "frames": 3, "fps": 12, "loop": false },
+        "knocked": { "res": "res://assets/characters/zombie_stopper/knocked.png", "src": "zombie_pack/AnimationSheets/Zombie_Character_32x32/Zombie4/Zombie 4_knocked .png", "frames": 6, "fps": 10, "loop": false },
+        "death":   { "res": "res://assets/characters/zombie_stopper/death.png",   "src": "zombie_pack/AnimationSheets/Zombie_Character_32x32/Zombie4/Zombie 4_death 4.png",  "frames": 8, "fps": 10, "loop": false }
+      }
+    },
+
+    "zombie_brute": {
+      "role": "Brute. Massive HP, wrecks cars fast. Counter: avoid, or use explosive barrels.",
+      "frame_size": [32, 32], "scale": 1.75, "tint": "#ffffff",
+      "animations": {
+        "idle":    { "res": "res://assets/characters/zombie_brute/idle.png",    "src": "zombie_pack/AnimationSheets/Zombie_Character_32x32/Zombie3/Zombie 3_idle .png",    "frames": 6, "fps": 5,  "loop": true },
+        "run":     { "res": "res://assets/characters/zombie_brute/run.png",     "src": "zombie_pack/AnimationSheets/Zombie_Character_32x32/Zombie3/Zombie 3_run .png",     "frames": 8, "fps": 7,  "loop": true },
+        "hit":     { "res": "res://assets/characters/zombie_brute/hit.png",     "src": "zombie_pack/AnimationSheets/Zombie_Character_32x32/Zombie3/Zombie 3_Hit .png",     "frames": 3, "fps": 10, "loop": false },
+        "knocked": { "res": "res://assets/characters/zombie_brute/knocked.png", "src": "zombie_pack/AnimationSheets/Zombie_Character_32x32/Zombie3/Zombie 3_knocked .png", "frames": 6, "fps": 8,  "loop": false },
+        "death":   { "res": "res://assets/characters/zombie_brute/death.png",   "src": "zombie_pack/AnimationSheets/Zombie_Character_32x32/Zombie3/Zombie 3_death.png",    "frames": 8, "fps": 8,  "loop": false }
+      }
+    },
+
+    "npc_companion_a": {
+      "role": "AI companion / passenger (can be secretly infected). 'talk' also serves as the cough tell.",
+      "frame_size": [32, 32],
+      "animations": {
+        "idle": { "res": "res://assets/characters/npc_a/idle.png", "src": "zombie_pack/AnimationSheets/Npc_Character_32x32/NPC animations -Npc_Idle.png", "frames": 6, "fps": 6, "loop": true },
+        "talk": { "res": "res://assets/characters/npc_a/talk.png", "src": "zombie_pack/AnimationSheets/Npc_Character_32x32/NPC animations -Npc_Talk.png", "frames": 6, "fps": 8, "loop": true }
+      }
+    },
+
+    "npc_companion_b": {
+      "role": "Second AI companion variant.",
+      "frame_size": [32, 32],
+      "animations": {
+        "idle": { "res": "res://assets/characters/npc_b/idle.png", "src": "zombie_pack/AnimationSheets/Npc_Character_32x32/NPC animations -Npc_2_Idle.png", "frames": 6, "fps": 6, "loop": true },
+        "talk": { "res": "res://assets/characters/npc_b/talk.png", "src": "zombie_pack/AnimationSheets/Npc_Character_32x32/NPC animations -Npc_2_Talk.png", "frames": 6, "fps": 8, "loop": true }
+      }
+    },
+
+    "bandit_rival": {
+      "role": "Rival survivor (sabotage AI / multiplayer rival skin). Also usable as a hostile human.",
+      "frame_size": [32, 32],
+      "animations": {
+        "idle":    { "res": "res://assets/characters/bandit/idle.png",    "src": "zombie_pack/AnimationSheets/Bandit_character_32x32/Animations_bandit-idle.png",    "frames": 6, "fps": 8,  "loop": true },
+        "run":     { "res": "res://assets/characters/bandit/run.png",     "src": "zombie_pack/AnimationSheets/Bandit_character_32x32/Animations_bandit-Run.png",     "frames": 8, "fps": 12, "loop": true },
+        "hit":     { "res": "res://assets/characters/bandit/hit.png",     "src": "zombie_pack/AnimationSheets/Bandit_character_32x32/Animations_bandit-Hit.png",     "frames": 3, "fps": 12, "loop": false },
+        "knocked": { "res": "res://assets/characters/bandit/knocked.png", "src": "zombie_pack/AnimationSheets/Bandit_character_32x32/Animations_bandit-Knocked.png", "frames": 6, "fps": 10, "loop": false },
+        "death":   { "res": "res://assets/characters/bandit/death.png",   "src": "zombie_pack/AnimationSheets/Bandit_character_32x32/Animations_bandit-Death.png",   "frames": 8, "fps": 10, "loop": false }
+      }
+    }
+  },
+
+  "vehicles": {
+    "_note": "Single top-down sprites, nose up. Base stats are starting points for CarStats .tres resources (Phase 4).",
+    "delivery_hatch":  { "res": "res://assets/vehicles/car3.png",  "src": "cars/cars/car3.png",  "size": [15, 26], "look": "white hatchback",          "class": "starter",  "base": { "max_hp": 100, "top_speed": 330, "accel": 570, "ram_mult": 1.0, "fuel_cap": 100 } },
+    "compact_orange":  { "res": "res://assets/vehicles/car4.png",  "src": "cars/cars/car4.png",  "size": [15, 26], "look": "orange compact",           "class": "civilian", "base": { "max_hp": 100, "top_speed": 345, "accel": 570, "ram_mult": 1.0, "fuel_cap": 90 } },
+    "compact_pink":    { "res": "res://assets/vehicles/car6.png",  "src": "cars/cars/car6.png",  "size": [15, 26], "look": "pink compact, white stripe","class": "civilian", "base": { "max_hp": 95,  "top_speed": 352, "accel": 585, "ram_mult": 1.0, "fuel_cap": 90 } },
+    "compact_cyan":    { "res": "res://assets/vehicles/car7.png",  "src": "cars/cars/car7.png",  "size": [15, 26], "look": "cyan compact",             "class": "civilian", "base": { "max_hp": 100, "top_speed": 338, "accel": 555, "ram_mult": 1.0, "fuel_cap": 100 } },
+    "compact_green":   { "res": "res://assets/vehicles/car9.png",  "src": "cars/cars/car9.png",  "size": [15, 26], "look": "green compact, gold stripe","class": "civilian", "base": { "max_hp": 100, "top_speed": 345, "accel": 570, "ram_mult": 1.0, "fuel_cap": 95 } },
+    "muscle_red":      { "res": "res://assets/vehicles/car1.png",  "src": "cars/cars/car1.png",  "size": [15, 26], "look": "red, twin gold stripes",   "class": "muscle",   "base": { "max_hp": 85,  "top_speed": 405, "accel": 660, "ram_mult": 1.1, "fuel_cap": 80 } },
+    "muscle_blue":     { "res": "res://assets/vehicles/car2.png",  "src": "cars/cars/car2.png",  "size": [15, 25], "look": "blue, white stripes",      "class": "muscle",   "base": { "max_hp": 85,  "top_speed": 405, "accel": 660, "ram_mult": 1.1, "fuel_cap": 80 } },
+    "muscle_yellow":   { "res": "res://assets/vehicles/car12.png", "src": "cars/cars/car12.png", "size": [15, 25], "look": "yellow, black stripes",    "class": "muscle",   "base": { "max_hp": 85,  "top_speed": 398, "accel": 675, "ram_mult": 1.1, "fuel_cap": 80 } },
+    "sports_black":    { "res": "res://assets/vehicles/car5.png",  "src": "cars/cars/car5.png",  "size": [15, 26], "look": "black, gold center stripe","class": "sports",   "base": { "max_hp": 70,  "top_speed": 450, "accel": 750, "ram_mult": 0.9, "fuel_cap": 70 } },
+    "sports_green":    { "res": "res://assets/vehicles/car13.png", "src": "cars/cars/car13.png", "size": [17, 28], "look": "green racer, rear wing",   "class": "sports",   "base": { "max_hp": 70,  "top_speed": 465, "accel": 750, "ram_mult": 0.9, "fuel_cap": 70 } },
+    "heavy_pink":      { "res": "res://assets/vehicles/car8.png",  "src": "cars/cars/car8.png",  "size": [17, 30], "look": "large pink sedan",         "class": "heavy",    "base": { "max_hp": 140, "top_speed": 300, "accel": 450, "ram_mult": 1.3, "fuel_cap": 120 } },
+    "heavy_orange":    { "res": "res://assets/vehicles/car10.png", "src": "cars/cars/car10.png", "size": [17, 29], "look": "wide orange truck",        "class": "heavy",    "base": { "max_hp": 150, "top_speed": 292, "accel": 435, "ram_mult": 1.35, "fuel_cap": 120 } },
+    "armored_black":   { "res": "res://assets/vehicles/car11.png", "src": "cars/cars/car11.png", "size": [17, 30], "look": "black with front grille",  "class": "armored",  "base": { "max_hp": 180, "top_speed": 285, "accel": 420, "ram_mult": 1.5, "fuel_cap": 110, "latch_resist": 0.5 } },
+    "military_camo":   { "res": "res://assets/vehicles/car_camo.png", "src": "cars/cars/Car.png", "size": [15, 30], "look": "green/yellow camo",     "class": "military", "base": { "max_hp": 200, "top_speed": 315, "accel": 480, "ram_mult": 1.6, "fuel_cap": 130, "latch_resist": 0.6 }, "rarity": "rare" }
+  },
+
+  "weapons": {
+    "_note": "*_Flicker sheets = 7-frame pickup glint (32x32). *_Shoot sheets = firing animation (32x32 frames).",
+    "knife":           { "type": "melee",  "idle": { "res": "res://assets/weapons/knife.png",             "src": "zombie_pack/AnimationSheets/Weaonns_Sprites_32x32/Knife.png",                  "frames": 7 } },
+    "axe":             { "type": "melee",  "idle": { "res": "res://assets/weapons/axe_flicker.png",       "src": "zombie_pack/AnimationSheets/Weaonns_Sprites_32x32/Axe_Flicker.png",            "frames": 7 } },
+    "pistol":          { "type": "ranged", "idle": { "res": "res://assets/weapons/pistol_flicker.png",    "src": "zombie_pack/AnimationSheets/Weaonns_Sprites_32x32/Pistol_Flicker.png",         "frames": 7 },
+                                           "shoot": { "res": "res://assets/weapons/pistol_shoot.png",     "src": "zombie_pack/AnimationSheets/Weaonns_Sprites_32x32/Pistol_Shoot.png",           "frames": 5 } },
+    "revolver":        { "type": "ranged", "idle": { "res": "res://assets/weapons/revolver_flicker.png",  "src": "zombie_pack/AnimationSheets/Weaonns_Sprites_32x32/Revolver_Flicker.png",       "frames": 7 },
+                                           "shoot": { "res": "res://assets/weapons/revolver_shoot.png",   "src": "zombie_pack/AnimationSheets/Weaonns_Sprites_32x32/Revlover_Shoot.png",         "frames": 9 } },
+    "shotgun":         { "type": "ranged", "idle": { "res": "res://assets/weapons/shotgun_flicker.png",   "src": "zombie_pack/AnimationSheets/Weaonns_Sprites_32x32/Pump_Flicker.png",           "frames": 7 },
+                                           "shoot": { "res": "res://assets/weapons/shotgun_shoot.png",    "src": "zombie_pack/AnimationSheets/Weaonns_Sprites_32x32/Pump_Shoot.png",             "frames": 10 } },
+    "rifle":           { "type": "ranged", "idle": { "res": "res://assets/weapons/rifle_flicker.png",     "src": "zombie_pack/AnimationSheets/Weaonns_Sprites_32x32/Rifle_Flicker.png",          "frames": 7 },
+                                           "shoot": { "res": "res://assets/weapons/rifle_shoot.png",      "src": "zombie_pack/AnimationSheets/Weaonns_Sprites_32x32/Rifle_Shoot.png",            "frames": 4 } },
+    "sniper":          { "type": "ranged", "idle": { "res": "res://assets/weapons/sniper_flicker.png",    "src": "zombie_pack/AnimationSheets/Weaonns_Sprites_32x32/Sniper_Flicker.png",         "frames": 7 },
+                                           "shoot": { "res": "res://assets/weapons/sniper_shoot.png",     "src": "zombie_pack/AnimationSheets/Weaonns_Sprites_32x32/Sniper_Shoot.png",           "frames": 13 } },
+    "rocket_launcher": { "type": "ranged", "idle": { "res": "res://assets/weapons/rocket_flicker.png",    "src": "zombie_pack/AnimationSheets/Weaonns_Sprites_32x32/RocketLauncher_Flicker.png", "frames": 7 },
+                                           "shoot": { "res": "res://assets/weapons/rocket_shoot.png",     "src": "zombie_pack/AnimationSheets/Weaonns_Sprites_32x32/RocketLauncher_Shoot.png",   "frames": 12 } },
+    "_static_sheet":   { "res": "res://assets/weapons/weapons_static_sheet.png", "src": "zombie_pack/SpriteSheets/Weapons sprites (32x32).png", "grid": [6, 2], "cell": [32, 32] }
+  },
+
+  "items": {
+    "_note": "All 16x16, 7-frame idle bob animations.",
+    "scrap":            { "use": "Run currency (Scrap/Cash)",              "res": "res://assets/items/scraps.png",           "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -Scraps.png" },
+    "fuel_can":         { "use": "Car fuel pickup",                         "res": "res://assets/items/gas.png",              "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -gas.png" },
+    "repair_tools":     { "use": "Car repair pickup / handyman tool icon", "res": "res://assets/items/tools.png",            "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -tools.png" },
+    "medkit":           { "use": "Player health pickup",                    "res": "res://assets/items/medkit.png",           "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -medkit.png" },
+    "ammo_pistol":      { "use": "Pistol / revolver ammo",                  "res": "res://assets/items/ammo.png",             "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -ammo.png" },
+    "ammo_shotgun":     { "use": "Shotgun ammo",                            "res": "res://assets/items/ammo_shotgun.png",     "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -ammo-shotgun.png" },
+    "ammo_rifle":       { "use": "Rifle ammo",                              "res": "res://assets/items/ammo_rifle.png",       "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -ammo-rifle.png" },
+    "ammo_sniper":      { "use": "Sniper ammo",                             "res": "res://assets/items/ammo_sniper.png",      "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -ammo-Sniper.png" },
+    "battery":          { "use": "Task item: generator repair",            "res": "res://assets/items/battery.png",          "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -battery.png" },
+    "fuse":             { "use": "Task item: fuse box (Electronics sprite)","res": "res://assets/items/electronics.png",      "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -Electronics.png" },
+    "fire_extinguisher":{ "use": "Task item: put out fire",                 "res": "res://assets/items/fire_extinguisher.png","src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -FireExtenguisher.png" },
+    "radio":            { "use": "Delivery order / mission giver icon",     "res": "res://assets/items/radio.png",            "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -Radio.png" },
+    "map":              { "use": "Route select icon",                       "res": "res://assets/items/map.png",              "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -map.png" },
+    "blueprint":        { "use": "Upgrade unlock icon (Garage)",            "res": "res://assets/items/blueprint.png",        "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -bluePrint.png" },
+    "dynamite":         { "use": "Throwable / Brute counter",               "res": "res://assets/items/dynamite.png",         "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -Dynamite.png" },
+    "grenade":          { "use": "Throwable",                               "res": "res://assets/items/grenades.png",         "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -grenades .png" },
+    "armor_vest":       { "use": "Player armor upgrade icon",               "res": "res://assets/items/armor_vest.png",       "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -armorVest.png" },
+    "gas_mask":         { "use": "Infection resist upgrade icon",           "res": "res://assets/items/gas_mask.png",         "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -GasMask.png" },
+    "backpack":         { "use": "Inventory tier 1 icon",                   "res": "res://assets/items/backpack.png",         "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -BackPack.png" },
+    "hiking_bag":       { "use": "Inventory tier 2 icon",                   "res": "res://assets/items/hiking_bag.png",       "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -HikingBag.png" },
+    "military_bag":     { "use": "Inventory tier 3 icon",                   "res": "res://assets/items/military_bag.png",     "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -MilitaryBag.png" },
+    "steel":            { "use": "Material: vehicle upgrades",              "res": "res://assets/items/steel.png",            "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -Steel.png" },
+    "wood":             { "use": "Material: barricades",                    "res": "res://assets/items/wood.png",             "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -Wood.png" },
+    "skull":            { "use": "Kill counter / infection icon",           "res": "res://assets/items/skull.png",            "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -skull .png" },
+    "chest_green":      { "use": "Common loot crate icon",                  "res": "res://assets/items/chest_green.png",      "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -GreenChest.png" },
+    "chest_metal":      { "use": "Uncommon loot crate icon",                "res": "res://assets/items/chest_metal.png",      "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -MetalChest.png" },
+    "chest_red":        { "use": "Rare loot crate icon",                    "res": "res://assets/items/chest_red.png",        "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -RedChest.png" },
+    "cargo_food_stock": { "use": "Delivery cargo",                          "res": "res://assets/items/food_stock.png",       "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -foodStock.png" },
+    "cargo_seeds":      { "use": "Delivery cargo",                          "res": "res://assets/items/seeds_pack.png",       "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -SeedsPack.png" },
+    "cargo_carrot":     { "use": "Delivery cargo",                          "res": "res://assets/items/carrot.png",           "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -carrot.png" },
+    "cargo_corn":       { "use": "Delivery cargo",                          "res": "res://assets/items/corn.png",             "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -Corn.png" },
+    "cargo_potatoes":   { "use": "Delivery cargo",                          "res": "res://assets/items/potatoes.png",         "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -potatoes.png" },
+    "cargo_wheat":      { "use": "Delivery cargo",                          "res": "res://assets/items/wheat.png",            "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -wheat.png" },
+    "_static_sheet":    { "res": "res://assets/items/items_bullets_static_sheet.png", "src": "zombie_pack/SpriteSheets/items & bullets sprites(16x16).png", "grid": [5, 7], "cell": [16, 16], "use": "Bullet projectiles + static item icons" }
+  },
+
+  "props": {
+    "explosive_barrel": { "use": "Environmental hazard (Brute counter)", "res": "res://assets/props/flame_barrel.png", "src": "zombie_pack/AnimationSheets/Props-FlameBarrel_Idle.png", "frame_size": [64, 64], "frames": 7 },
+    "camp_flag":        { "use": "Delivery destination / camp marker",   "res": "res://assets/props/flag.png",         "src": "zombie_pack/AnimationSheets/Props-Flag_Idle.png",        "frame_size": [64, 64], "frames": 7 },
+    "loot_chest":       { "use": "Openable loot chest",                  "res": "res://assets/props/chest_open.png",   "src": "zombie_pack/AnimationSheets/chest pixel art-Chest_Open_32x16.png", "frame_size": [32, 16], "frames": 6 }
+  },
+
+  "effects": {
+    "explosion":     { "res": "res://assets/effects/explosion.png",     "src": "zombie_pack/AnimationSheets/Effects_Sprites/explosion sprite sheet (48x48).png", "frame_size": [48, 48], "frames": 7 },
+    "bullet_impact": { "res": "res://assets/effects/bullet_impact.png", "src": "zombie_pack/AnimationSheets/Effects_Sprites/bullet impact -Sheet (20x20).png",  "frame_size": [20, 20], "frames": 5, "use": "Bullet hit + car ram impact burst" },
+    "popup_1":       { "res": "res://assets/effects/popup_1.png",       "src": "zombie_pack/AnimationSheets/Effects_Sprites/popUp_1 (20x20).png",               "frame_size": [20, 20], "frames": 5, "use": "'!' speech bubble: zombie noticed the player (aggro)" },
+    "popup_2":       { "res": "res://assets/effects/popup_2.png",       "src": "zombie_pack/AnimationSheets/Effects_Sprites/popUp_2 (20x20).png",               "frame_size": [20, 20], "frames": 5, "use": "'?' speech bubble: zombie lost the player / NPC confused" },
+    "popup_3":       { "res": "res://assets/effects/popup_3.png",       "src": "zombie_pack/AnimationSheets/Effects_Sprites/popUp_3 (20x20).png",               "frame_size": [20, 20], "frames": 5, "use": "Skull speech bubble: infection tell on bitten companions" },
+    "particles":     { "res": "res://assets/effects/particles.png",     "src": "zombie_pack/SpriteSheets/particle effects.png", "size": [80, 32], "use": "Dust / smoke / sparks" }
+  },
+
+  "tilesets": {
+    "wasteland": { "location": "Wasteland + streets (driving)", "res": "res://assets/tilesets/wasteland_32.png", "src": "zombie_pack/TileSheets/Wasteland_Tileset_32x32.png", "tile": 32, "size": [288, 608],
+                   "contains": "dirt road w/ cracks, wrecked cars (red/blue/brown), oil barrels, tires, gas pumps, crates, generator-like machines, road signs",
+                   "tiles": {
+                     "_note": "Atlas coords (col,row) in 32px cells.",
+                     "road":        [[1, 1]],
+                     "road_edge":   [[0, 1], [2, 1]],
+                     "road_crack":  [[4, 1]],
+                     "ground":      [[1, 1]],
+                     "_ground_note": "[1,3] (dark dirt) has a baked outline and stripes when tiled; ground reuses [1,1] on a darkened layer.",
+                     "ground_alt":  [[5, 0], [6, 0], [6, 1], [5, 1]]
+                   },
+                   "regions": {
+                     "_note": "Pixel rects [x, y, w, h] for props placed as Sprite2D + StaticBody2D.",
+                     "wreck_red_v":   [0, 160, 32, 64],
+                     "wreck_red_h":   [32, 176, 64, 48],
+                     "wreck_blue_v":  [0, 224, 32, 64],
+                     "wreck_blue_h":  [32, 240, 80, 48],
+                     "wreck_brown_v": [0, 288, 32, 64],
+                     "wreck_brown_h": [32, 304, 64, 48],
+                     "crate_metal":   [128, 160, 32, 32],
+                     "crate_wood":    [128, 192, 32, 32],
+                     "barrel_red":    [128, 224, 32, 32],
+                     "barrel_orange": [128, 256, 32, 32],
+                     "tires":         [128, 288, 32, 32],
+                     "fence":         [128, 320, 64, 32],
+                     "container":     [192, 176, 64, 96],
+                     "pump_working":  [136, 360, 48, 64],
+                     "pump_broken":   [8, 552, 48, 56]
+                   } },
+    "hospital":  { "location": "Hospital interior",             "res": "res://assets/tilesets/interior_32.png",  "src": "zombie_pack/TileSheets/Interior_Tileset_32x32.png",  "tile": 32, "size": [320, 544],
+                   "tiles": {
+                     "floor":         [[1, 2]],
+                     "floor_dirty":   [[5, 2]],
+                     "floor_cracked": [[7, 2]],
+                     "wall":          [[1, 4]]
+                   },
+                   "solid": ["wall"],
+                   "regions": {
+                     "_note": "Pixel rects [x, y, w, h]; verified on a contact sheet.",
+                     "bed_a": [0, 480, 32, 48], "bed_b": [56, 480, 40, 32], "bed_c": [32, 512, 40, 32],
+                     "gurney_bloody": [216, 480, 40, 32], "surgery_curtain": [192, 432, 48, 48],
+                     "vending_soda": [128, 352, 32, 42], "vending_snack": [160, 352, 32, 42], "coffee_machine": [192, 352, 32, 42],
+                     "desk_computer": [70, 416, 52, 32], "desk_papers": [70, 352, 52, 32], "lockers": [80, 288, 32, 44],
+                     "fridge": [128, 288, 32, 48], "fridge_double": [207, 288, 34, 48], "supply_shelf": [266, 290, 42, 54],
+                     "water_cooler": [262, 416, 22, 40], "med_cabinet": [256, 32, 32, 64], "shelving": [224, 360, 32, 36],
+                     "file_cabinet": [132, 438, 24, 24], "radio_desk": [256, 128, 32, 32]
+                   } },
+    "camp":      { "location": "Survivor camp",                 "res": "res://assets/tilesets/camp.png",         "src": "zombie_pack/TileSheets/Tilesheet_Camp.png",          "tile": 32, "size": [367, 848],
+                   "warning": "367px wide and not grid-aligned: used for props only (pixel regions), never as a TileSet.",
+                   "regions": {
+                     "fence_chain_sign": [15, 82, 100, 30], "fence_wood": [15, 120, 130, 25], "fence_rail": [240, 124, 96, 21],
+                     "tent_tan": [27, 227, 68, 78], "tent_box": [112, 249, 63, 55], "tent_green": [30, 336, 35, 64],
+                     "tent_green_box": [82, 356, 60, 42], "shack_barrels": [145, 320, 55, 80], "shack_a": [210, 320, 58, 80],
+                     "shack_b": [277, 320, 48, 80], "pallet": [47, 431, 33, 30], "boxes": [65, 479, 28, 40],
+                     "water_tower": [17, 721, 30, 63], "planter_long": [47, 759, 65, 25], "table_food": [17, 676, 58, 33],
+                     "table_trade": [80, 676, 65, 33], "barrels_grey": [190, 581, 38, 40], "barrel_oil": [212, 624, 23, 30],
+                     "sign_keep_out": [287, 431, 70, 30], "sign_quarantine": [287, 466, 70, 25], "sign_safe": [242, 431, 30, 18],
+                     "flag_tires": [112, 791, 30, 53], "fire_barrel": [150, 796, 23, 30], "palisade": [277, 721, 83, 63]
+                   } }
+  },
+
+  "ui": {
+    "buttons":          { "res": "res://assets/ui/buttons_sheet.png",      "src": "zombie_pack/UI/buttons sheet(32x32).png",          "cell": [32, 32], "size": [96, 192] },
+    "tileable_buttons": { "res": "res://assets/ui/tileable_buttons.png",   "src": "zombie_pack/UI/tilable buttons (32x96).png",       "size": [96, 64], "use": "NinePatchRect buttons" },
+    "panel_1":          { "res": "res://assets/ui/panel_1.png",            "src": "zombie_pack/UI/panel 1 (32x32).png",               "size": [96, 96], "use": "NinePatchRect panel (Garage)" },
+    "panel_2":          { "res": "res://assets/ui/panel_2.png",            "src": "zombie_pack/UI/panel 2 (32x32).png",               "size": [96, 96], "use": "NinePatchRect panel (HUD)" },
+    "healthbars_icons": { "res": "res://assets/ui/healthbars_icons.png",   "src": "zombie_pack/UI/UI healthBars and Icons(32x32).png", "size": [216, 216], "use": "HP / fuel / noise bars + icons" },
+    "bar_fillers":      { "res": "res://assets/ui/bar_fillers.png",        "src": "zombie_pack/UI/heath bar fillers colors (64x64).png", "cell": [64, 64], "size": [256, 64], "use": "TextureProgressBar fills (4 colors)" }
+  },
+
+  "excluded": {
+    "cars/cars/cars.png": "2048x2048 preview sheet of the same 14 cars; redundant.",
+    "zombie_pack/ASEPRITE FILE/*": "Aseprite source files; not importable by Godot.",
+    "zombie_pack/Update2/*": "Byte-identical duplicates of AnimationSheets bandit/props files.",
+    "zombie_pack/ASEPRITE FILE/update2_ase file/Tilesheet_Camp.png": "Duplicate of TileSheets/Tilesheet_Camp.png."
+  },
+
+  "gaps": {
+    "audio": "No sound files in either pack. Coughing tell, engine, gunshots, and zombie groans all need audio from elsewhere.",
+    "wrench_bat": "GDD lists wrench and bat melee weapons; pack only has knife and axe. Using those as stand-ins.",
+    "task_objects": "No generator or fuse box sprites. The sample task uses the wasteland gas pump (broken -> working regions) as a 'Repair the fuel pump' job.",
+    "flashlight": "No flashlight sprite or light cookie. Use a PointLight2D with a generated gradient texture.",
+    "top_down_characters": "Characters are front-facing, not rotated top-down. Fine for gameplay; aiming is shown by rotating the weapon."
+  }
+}

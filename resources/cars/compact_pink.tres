@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="CarStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/car/car_stats.gd" id="1_b1rah"]
+[ext_resource type="Texture2D" path="res://assets/vehicles/car6.png" id="2_fu380"]
+
+[resource]
+script = ExtResource("1_b1rah")
+display_name = "Compact Pink"
+sprite = ExtResource("2_fu380")
+max_hp = 95.0
+top_speed = 352.0
+acceleration = 585.0
+turn_rate = 3.4299999999999997
+fuel_capacity = 90.0

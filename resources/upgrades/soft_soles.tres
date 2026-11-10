@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="UpgradeDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/meta/upgrade_def.gd" id="1_fka4l"]
+
+[resource]
+script = ExtResource("1_fka4l")
+id = &"soft_soles"
+display_name = "Soft Soles"
+description = "Quieter movement: sprinting and working make less noise."
+category = 2
+icon_item = "backpack"
+stat = &"player.noise"
+per_level = -0.15

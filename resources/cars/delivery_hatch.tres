@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="CarStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/car/car_stats.gd" id="1_17851"]
+[ext_resource type="Texture2D" path="res://assets/vehicles/car3.png" id="2_qnrvw"]
+
+[resource]
+script = ExtResource("1_17851")
+display_name = "Delivery Hatch"
+sprite = ExtResource("2_qnrvw")
+turn_rate = 3.4

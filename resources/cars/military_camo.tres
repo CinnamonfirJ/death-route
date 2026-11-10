@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="CarStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/car/car_stats.gd" id="1_glt5m"]
+[ext_resource type="Texture2D" path="res://assets/vehicles/car_camo.png" id="2_efm7o"]
+
+[resource]
+script = ExtResource("1_glt5m")
+display_name = "Military Camo"
+sprite = ExtResource("2_efm7o")
+max_hp = 200.0
+latch_resist = 0.6
+top_speed = 315.0
+acceleration = 480.0
+turn_rate = 2.8
+ram_mult = 1.6
+fuel_capacity = 130.0

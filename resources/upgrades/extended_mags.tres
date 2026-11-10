@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="UpgradeDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/meta/upgrade_def.gd" id="1_3rht7"]
+
+[resource]
+script = ExtResource("1_3rht7")
+id = &"extended_mags"
+display_name = "Extended Mags"
+description = "Bigger magazines."
+category = 1
+icon_item = "ammo_rifle"
+stat = &"weapon.mag_size"
+per_level = 0.25
+max_level = 2

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CarStats" format=3]
+
+[ext_resource type="Script" path="res://scripts/car/car_stats.gd" id="1_hhs0q"]
+[ext_resource type="Texture2D" path="res://assets/vehicles/car10.png" id="2_ca0bw"]
+
+[resource]
+script = ExtResource("1_hhs0q")
+display_name = "Heavy Orange"
+sprite = ExtResource("2_ca0bw")
+max_hp = 150.0
+top_speed = 292.0
+acceleration = 435.0
+turn_rate = 3.1
+ram_mult = 1.35
+fuel_capacity = 120.0

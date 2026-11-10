@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="UpgradeDef" format=3]
+
+[ext_resource type="Script" path="res://scripts/meta/upgrade_def.gd" id="1_rp4ji"]
+
+[resource]
+script = ExtResource("1_rp4ji")
+id = &"thick_overalls"
+display_name = "Thick Overalls"
+description = "More health."
+category = 2
+icon_item = "medkit"
+stat = &"player.max_hp"
+mode = 1
+per_level = 20.0
+max_level = 2
+base_cost = 50
