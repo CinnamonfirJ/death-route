@@ -64,6 +64,7 @@ func _ready() -> void:
 	sprite.sprite_frames = Assets.character_frames(zombie_id)
 	var s := float(entry.get("scale", 1.0))
 	sprite.scale = Vector2(s, s)
+	Fx.attach_shadow(self, Vector2(22, 9) * s)
 	sprite.self_modulate = Color(entry.get("tint", "#ffffff"))
 	sprite.play(&"idle")
 	sprite.frame = randi() % sprite.sprite_frames.get_frame_count(&"idle")
@@ -161,7 +162,7 @@ func _after_move() -> void:
 
 func _animate() -> void:
 	if absf(velocity.x) > 1.0:
-		sprite.flip_h = velocity.x < 0.0
+		sprite.flip_h = velocity.x > 0.0
 	_play(&"run" if velocity.length() > 5.0 else &"idle")
 
 

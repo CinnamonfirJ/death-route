@@ -3,8 +3,8 @@ extends CanvasLayer
 ## End-of-run card. Pauses the game; "Back to Garage" (or [E]/[R]) returns to the Garage.
 
 const SUCCESS_LINES := [
-	"Delivered. The customer did not tip.",
-	"Package arrived. Mostly intact. Like you.",
+	"Pizza delivered. The customer did not tip.",
+	"Pizza arrived. Mostly intact. Like you.",
 	"Five stars. The reviewer was eaten shortly after.",
 ]
 const FAIL_LINES := [
@@ -29,10 +29,14 @@ func _ready() -> void:
 
 func show_summary(summary: Dictionary) -> void:
 	var success: bool = summary.get("success", false)
-	title.text = "DELIVERED" if success else "RUN FAILED"
+	var pizza_delivered: bool = summary.get("pizza_delivered", success)
+	title.text = "ROUTE COMPLETE" if success else "RUN FAILED"
 	title.add_theme_color_override(&"font_color", Color(0.55, 0.9, 0.45) if success else Color(0.95, 0.3, 0.25))
 	flavor.text = (SUCCESS_LINES if success else FAIL_LINES).pick_random()
+	if not success and pizza_delivered:
+		flavor.text = "The customer got their pizza. You didn't make it back."
 	var lines := [
+		"Pizza handed to the customer" if pizza_delivered else "Pizza undelivered",
 		"Scrap found:   %d" % summary.get("scrap_found", 0),
 		"Scrap banked:  %d%s" % [summary.get("scrap_banked", 0), "" if success else "  (half: you died)"],
 		"Zombies killed: %d" % summary.get("kills", 0),

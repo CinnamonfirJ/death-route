@@ -35,6 +35,7 @@ signal task_completed(task: Node)
 signal task_fumbled(task: Node, helper: Node)
 
 signal objective_changed(text: String)
+signal pizza_status_changed(text: String)
 ## HUD shows an off-screen arrow to each waypoint until it's cleared.
 signal waypoint_set(target: Node2D, label: String)
 signal waypoint_cleared(target: Node2D)

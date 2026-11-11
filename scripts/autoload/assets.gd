@@ -4,12 +4,21 @@ extends Node
 ## Usage: $AnimatedSprite2D.sprite_frames = Assets.character_frames(&"zombie_walker")
 
 const MANIFEST_PATH := "res://assets/asset_manifest.json"
+const UI_FONT_PATH := "res://assets/ui/NewGameFont.ttf"
 
 var manifest: Dictionary = {}
 var _frames_cache: Dictionary = {}
 
 
 func _ready() -> void:
+	var project_theme := ThemeDB.get_project_theme()
+	if project_theme and ResourceLoader.exists(UI_FONT_PATH):
+		var font := FontVariation.new()
+		font.base_font = load(UI_FONT_PATH)
+		font.spacing_glyph = 1
+		# NewGame lacks punctuation such as brackets, slashes, and percent signs.
+		font.fallbacks = [ThemeDB.get_default_theme().default_font]
+		project_theme.default_font = font
 	var f := FileAccess.open(MANIFEST_PATH, FileAccess.READ)
 	if f == null:
 		push_error("Asset manifest missing at %s" % MANIFEST_PATH)
@@ -190,6 +199,7 @@ func ui_theme() -> Theme:
 		return _frames_cache["ui_theme"]
 	var ui: Dictionary = manifest["ui"]
 	var th := Theme.new()
+	th.default_font = ThemeDB.get_project_theme().default_font
 	th.default_font_size = 10
 
 	var dark := _nine(load(ui["panel_2"]["res"]), Rect2(0, 0, 96, 96), 16, 14)

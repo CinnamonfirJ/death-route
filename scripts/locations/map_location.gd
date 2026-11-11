@@ -5,7 +5,8 @@ extends Location
 ##
 ## Terrain:  .  ground (dirt)      =  road        ,  interior floor     #  wall (solid)
 ## Markers:  P  player start       C  your car    V  spare car (scavenged, 50-100% HP)
-##           X  delivery drop      K  car respawn point                 S  zombie spawn point
+##           X  customer           K  car respawn point                 S  zombie spawn point
+##           ?  possible pizza spawn (one is chosen per run)
 ##           H  survivor           B  explosive barrel
 ##           w  walker   l  latcher   o  stopper   R  brute
 ##           $  scrap    a  ammo      f  fuel      +  medkit
@@ -82,6 +83,7 @@ const PICKUPS := {"$": [Pickup.Kind.SCRAP, 6], "a": [Pickup.Kind.AMMO, 12],
 var size := Vector2i.ZERO
 var _rows: PackedStringArray = []
 var _survivors: Array[Vector2] = []
+var _pizza_spots: Array[Vector2] = []
 ## Shared actors found while parsing: [scene_path, props]. Spawned by _spawn_dynamic()
 ## (immediately offline; by the host once everyone has loaded, online).
 var _dynamic: Array = []
@@ -131,6 +133,10 @@ func _spawn_dynamic() -> void:
 
 func _survivor_spots() -> Array[Vector2]:
 	return _survivors
+
+
+func _pizza_spawn_spots() -> Array[Vector2]:
+	return _pizza_spots
 
 
 func _load_map() -> void:
@@ -188,7 +194,9 @@ func _place(ch: String, cell: Vector2i, legend: Dictionary) -> void:
 				"start_hp_ratio": randf_range(0.5, 1.0), "start_fuel_ratio": randf_range(0.3, 0.8),
 				"stat_variance": 0.1, "position": center}])
 		"X":
-			extraction.position = center
+			customer.position = foot
+		"?":
+			_pizza_spots.append(center)
 		"K":
 			add_marker(&"car_spawn", center)
 		"S":

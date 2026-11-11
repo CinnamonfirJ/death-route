@@ -12,7 +12,7 @@
     },
     "notes": [
       "Animation sheets are horizontal strips: frames = image_width / frame_width.",
-      "Characters are drawn front-facing (3/4 view), not rotated top-down. Face direction with flip_h and aim by rotating the weapon sprite.",
+      "Characters face left in the source art. Mirror horizontally for rightward movement and aim by rotating the weapon sprite.",
       "Cars are true top-down with the nose pointing UP (-Y). Rotate the Sprite2D by +PI/2 if the car body treats +X as forward.",
       "Only 4 zombie bodies exist for 4 bestiary types. Stopper and Brute get scale and modulate tints to read as heavier.",
       "Files were copied into res://assets with snake_case names. 'src' keeps the original filename for traceability."
@@ -29,6 +29,42 @@
         "hit":     { "res": "res://assets/characters/player/hit.png",     "src": "zombie_pack/AnimationSheets/Player_Character_32x32/Player_Hit .png",    "frames": 3, "fps": 12, "loop": false },
         "knocked": { "res": "res://assets/characters/player/knocked.png", "src": "zombie_pack/AnimationSheets/Player_Character_32x32/Player_knocked.png", "frames": 6, "fps": 10, "loop": false },
         "death":   { "res": "res://assets/characters/player/death.png",   "src": "zombie_pack/AnimationSheets/Player_Character_32x32/Player_Death .png",  "frames": 8, "fps": 10, "loop": false }
+      }
+    },
+
+    "female_combat_veteran": {
+      "role": "Combat Veteran playable courier",
+      "frame_size": [32, 32],
+      "animations": {
+        "death": { "res": "res://assets/characters/female_combat_veteran/death.png", "src": "zombie_pack/AnimationSheets/characters/Female_Combat_Veteran/Player_Death.png", "frames": 8, "fps": 10, "loop": false },
+        "hit": { "res": "res://assets/characters/female_combat_veteran/hit.png", "src": "zombie_pack/AnimationSheets/characters/Female_Combat_Veteran/Player_Hit.png", "frames": 3, "fps": 12, "loop": false },
+        "idle": { "res": "res://assets/characters/female_combat_veteran/idle.png", "src": "zombie_pack/AnimationSheets/characters/Female_Combat_Veteran/Player_idle.png", "frames": 6, "fps": 8, "loop": true },
+        "knocked": { "res": "res://assets/characters/female_combat_veteran/knocked.png", "src": "zombie_pack/AnimationSheets/characters/Female_Combat_Veteran/Player_knocked.png", "frames": 6, "fps": 10, "loop": false },
+        "run": { "res": "res://assets/characters/female_combat_veteran/run.png", "src": "zombie_pack/AnimationSheets/characters/Female_Combat_Veteran/Player_run.png", "frames": 8, "fps": 12, "loop": true }
+      }
+    },
+
+    "female_scientist": {
+      "role": "Scientist playable courier",
+      "frame_size": [32, 32],
+      "animations": {
+        "death": { "res": "res://assets/characters/female_scientist/death.png", "src": "zombie_pack/AnimationSheets/characters/Female_Scientist/Player_Death.png", "frames": 8, "fps": 10, "loop": false },
+        "hit": { "res": "res://assets/characters/female_scientist/hit.png", "src": "zombie_pack/AnimationSheets/characters/Female_Scientist/Player_Hit.png", "frames": 3, "fps": 12, "loop": false },
+        "idle": { "res": "res://assets/characters/female_scientist/idle.png", "src": "zombie_pack/AnimationSheets/characters/Female_Scientist/Player_idle.png", "frames": 6, "fps": 8, "loop": true },
+        "knocked": { "res": "res://assets/characters/female_scientist/knocked.png", "src": "zombie_pack/AnimationSheets/characters/Female_Scientist/Player_knocked.png", "frames": 6, "fps": 10, "loop": false },
+        "run": { "res": "res://assets/characters/female_scientist/run.png", "src": "zombie_pack/AnimationSheets/characters/Female_Scientist/Player_run.png", "frames": 8, "fps": 12, "loop": true }
+      }
+    },
+
+    "sheriff": {
+      "role": "Sheriff playable courier",
+      "frame_size": [32, 32],
+      "animations": {
+        "death": { "res": "res://assets/characters/sheriff/death.png", "src": "zombie_pack/AnimationSheets/characters/Sheriff/Player_Death.png", "frames": 8, "fps": 10, "loop": false },
+        "hit": { "res": "res://assets/characters/sheriff/hit.png", "src": "zombie_pack/AnimationSheets/characters/Sheriff/Player_Hit.png", "frames": 3, "fps": 12, "loop": false },
+        "idle": { "res": "res://assets/characters/sheriff/idle.png", "src": "zombie_pack/AnimationSheets/characters/Sheriff/Player_idle.png", "frames": 6, "fps": 8, "loop": true },
+        "knocked": { "res": "res://assets/characters/sheriff/knocked.png", "src": "zombie_pack/AnimationSheets/characters/Sheriff/Player_knocked.png", "frames": 6, "fps": 10, "loop": false },
+        "run": { "res": "res://assets/characters/sheriff/run.png", "src": "zombie_pack/AnimationSheets/characters/Sheriff/Player_run.png", "frames": 8, "fps": 12, "loop": true }
       }
     },
 
@@ -151,6 +187,7 @@
   },
 
   "items": {
+    "pizza":            { "use": "Delivery cargo",                          "res": "res://assets/items/pizza.png",            "src": "zombie_pack/AnimationSheets/items_with_pizza-Sheet.png" },
     "_note": "All 16x16, 7-frame idle bob animations.",
     "scrap":            { "use": "Run currency (Scrap/Cash)",              "res": "res://assets/items/scraps.png",           "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -Scraps.png" },
     "fuel_can":         { "use": "Car fuel pickup",                         "res": "res://assets/items/gas.png",              "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -gas.png" },

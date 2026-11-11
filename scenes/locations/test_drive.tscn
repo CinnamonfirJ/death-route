@@ -1,7 +1,7 @@
 [gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://scripts/systems/car_spawner.gd" id="9_carspawn"]
-[ext_resource type="PackedScene" path="res://scenes/locations/extraction_zone.tscn" id="10_ext"]
+[ext_resource type="PackedScene" path="res://scenes/locations/delivery_customer.tscn" id="10_ext"]
 [ext_resource type="PackedScene" path="res://scenes/ui/run_summary.tscn" id="11_summary"]
 
 [ext_resource type="Script" path="res://scripts/locations/test_drive.gd" id="1_level"]
@@ -64,8 +64,8 @@ script = ExtResource("9_carspawn")
 spawn_parent = NodePath("../Entities")
 starting_car = NodePath("../Entities/Car")
 
-[node name="ExtractionZone" parent="." instance=ExtResource("10_ext")]
-position = Vector2(-1024, -1024)
+[node name="DeliveryCustomer" parent="Entities" instance=ExtResource("10_ext")]
+position = Vector2(-928, -928)
 
 [node name="RunSummary" parent="." instance=ExtResource("11_summary")]
 

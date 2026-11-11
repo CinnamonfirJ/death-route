@@ -22,7 +22,7 @@ const MAX_PLAYERS := 4
 ## Seconds between batched noise reports from clients to the host.
 const NOISE_FLUSH := 0.1
 
-var players := {}  # peer id -> {"name": String}
+var players := {}  # peer id -> {"name": String, "character": StringName}
 var settings := {"location": "hospital", "rival": false}
 var role := "crew"  # "crew" or "rival" (only the rival's own machine knows)
 var my_name := "Handyman"
@@ -84,6 +84,10 @@ func is_local_authority(node: Node) -> bool:
 
 func peer_name(id: int) -> String:
 	return players.get(id, {}).get("name", "Handyman %d" % id)
+
+
+func peer_character(id: int) -> StringName:
+	return players.get(id, {}).get("character", GameManager.DEFAULT_CHARACTER)
 
 
 func can_host() -> bool:
@@ -198,7 +202,7 @@ func host(port := DEFAULT_PORT) -> Error:
 		status_changed.emit("Couldn't host on port %d (%s)" % [port, error_string(err)])
 		return err
 	multiplayer.multiplayer_peer = peer
-	players = {1: {"name": my_name}}
+	players = {1: {"name": my_name, "character": GameManager.selected_character}}
 	status_changed.emit("Hosting on port %d. Share your IP with friends." % port)
 	roster_changed.emit()
 	return OK
@@ -266,7 +270,7 @@ func _on_peer_disconnected(id: int) -> void:
 
 
 func _on_connected() -> void:
-	_rpc_register.rpc_id(1, my_name)
+	_rpc_register.rpc_id(1, my_name, GameManager.selected_character)
 
 
 func _on_connection_failed() -> void:
@@ -283,14 +287,38 @@ func _on_server_disconnected() -> void:
 
 
 @rpc("any_peer", "reliable")
-func _rpc_register(player_name: String) -> void:
+func _rpc_register(player_name: String, character: StringName) -> void:
 	if not multiplayer.is_server():
 		return
 	var id := multiplayer.get_remote_sender_id()
 	if players.size() >= MAX_PLAYERS or in_match:
 		multiplayer.multiplayer_peer.disconnect_peer(id)
 		return
-	players[id] = {"name": player_name.strip_edges().left(16)}
+	players[id] = {"name": player_name.strip_edges().left(16),
+		"character": character if GameManager.PLAYABLE_CHARACTERS.has(character) else GameManager.DEFAULT_CHARACTER}
+	_rpc_roster.rpc(players, settings)
+	roster_changed.emit()
+
+
+func set_character(character: StringName) -> void:
+	if not is_online() or in_match:
+		return
+	if is_host():
+		_set_peer_character(1, character)
+	else:
+		_rpc_set_character.rpc_id(1, character)
+
+
+@rpc("any_peer", "reliable")
+func _rpc_set_character(character: StringName) -> void:
+	if is_host():
+		_set_peer_character(multiplayer.get_remote_sender_id(), character)
+
+
+func _set_peer_character(id: int, character: StringName) -> void:
+	if in_match or not players.has(id) or not GameManager.PLAYABLE_CHARACTERS.has(character):
+		return
+	players[id].character = character
 	_rpc_roster.rpc(players, settings)
 	roster_changed.emit()
 

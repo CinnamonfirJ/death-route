@@ -7,6 +7,7 @@ extends CharacterBody2D
 @export var walk_speed := 80.0
 @export var sprint_speed := 130.0
 @export var acceleration := 900.0
+@export var character_id: StringName
 ## Noise added per second while sprinting (consumed by the Noise Meter in Phase 3).
 @export var sprint_noise_per_sec := 4.0
 
@@ -52,8 +53,11 @@ func _ready() -> void:
 	max_hp = GameManager.apply_stat(&"player.max_hp", max_hp)
 	sprint_noise_per_sec = GameManager.apply_stat(&"player.noise", sprint_noise_per_sec)
 	hp = max_hp
-	sprite.sprite_frames = Assets.character_frames(&"player_handyman")
+	if character_id == &"":
+		character_id = Net.peer_character(1) if Net.is_online() else GameManager.selected_character
+	sprite.sprite_frames = Assets.character_frames(character_id)
 	sprite.play(&"idle")
+	Fx.attach_shadow(self, Vector2(22, 9))
 	add_to_group(&"player")
 	interact_zone.monitorable = Net.is_online()  # teammates can give ammo / revive
 	Net.attach_sync(self,
@@ -70,7 +74,7 @@ func _ready() -> void:
 
 
 func display_name() -> String:
-	return Net.peer_name(get_multiplayer_authority()) if Net.is_online() else "Handyman"
+	return Net.peer_name(get_multiplayer_authority()) if Net.is_online() else GameManager.PLAYABLE_CHARACTERS[character_id]
 
 
 ## Auto-aim: max distance and how far off the crosshair a zombie can be to get locked.

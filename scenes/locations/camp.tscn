@@ -7,7 +7,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="5_hud"]
 [ext_resource type="Script" path="res://scripts/systems/noise_director.gd" id="6_noise"]
 [ext_resource type="Script" path="res://scripts/systems/car_spawner.gd" id="7_carspawn"]
-[ext_resource type="PackedScene" path="res://scenes/locations/extraction_zone.tscn" id="8_ext"]
+[ext_resource type="PackedScene" path="res://scenes/locations/delivery_customer.tscn" id="8_ext"]
 [ext_resource type="PackedScene" path="res://scenes/ui/run_summary.tscn" id="9_summary"]
 
 [node name="Camp" type="Node2D"]
@@ -56,7 +56,7 @@ script = ExtResource("7_carspawn")
 spawn_parent = NodePath("../Entities")
 starting_car = NodePath("../Entities/Car")
 
-[node name="ExtractionZone" parent="." instance=ExtResource("8_ext")]
+[node name="DeliveryCustomer" parent="Entities" instance=ExtResource("8_ext")]
 
 [node name="RunSummary" parent="." instance=ExtResource("9_summary")]
 

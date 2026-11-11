@@ -35,6 +35,7 @@ func _ready() -> void:
 		get_tree().change_scene_to_file("res://scenes/ui/lobby.tscn"))
 	_add_settings_button()
 	_build_tabs()
+	_build_destinations()
 	_refresh()
 	start_button.grab_focus()
 
@@ -238,11 +239,7 @@ func _refresh_loadout() -> void:
 		weapons_row.add_child(b)
 
 
-func _refresh_destinations() -> void:
-	# Hidden (dev) maps can't be picked here; fall back to a real destination.
-	if GameManager.LOCATIONS.get(GameManager.selected_location, {}).get("hidden", true):
-		GameManager.set_destination(&"wasteland")
-	_clear(destinations)
+func _build_destinations() -> void:
 	for id in GameManager.LOCATIONS:
 		var loc: Dictionary = GameManager.LOCATIONS[id]
 		if loc.get("hidden", false):
@@ -250,16 +247,27 @@ func _refresh_destinations() -> void:
 		var b := Button.new()
 		b.name = String(id)
 		b.toggle_mode = true
-		b.button_pressed = GameManager.selected_location == id
 		b.text = DEST_SHORT.get(id, loc.name)
 		b.add_theme_font_size_override(&"font_size", 9)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.pressed.connect(func() -> void:
-			GameManager.set_destination(id)
-			_refresh())
+		b.pressed.connect(_select_destination.bind(id))
 		destinations.add_child(b)
-	var sel: Dictionary = GameManager.LOCATIONS.get(GameManager.selected_location, {})
-	dest_blurb.text = "%s: %s" % [sel.get("name", "?"), sel.get("blurb", "")]
+
+
+func _select_destination(id: StringName) -> void:
+	GameManager.set_destination(id)
+	_refresh_destinations()
+
+
+func _refresh_destinations() -> void:
+	# Hidden (dev) maps can't be picked here; fall back to a real destination.
+	var selected: Dictionary = GameManager.LOCATIONS.get(GameManager.selected_location, {})
+	if selected.is_empty() or selected.get("hidden", false):
+		GameManager.set_destination(&"wasteland")
+		selected = GameManager.LOCATIONS[&"wasteland"]
+	for button: Button in destinations.get_children():
+		button.set_pressed_no_signal(button.name == GameManager.selected_location)
+	dest_blurb.text = "%s: %s" % [selected.name, selected.blurb]
 
 
 ## Shows the starter car with all purchased upgrades applied.

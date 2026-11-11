@@ -36,6 +36,8 @@ var _dead := false
 
 
 func _ready() -> void:
+	%PizzaIcon.texture = Assets.item_icon("pizza")
+	EventBus.pizza_status_changed.connect(func(t: String) -> void: %PizzaLabel.text = t)
 	EventBus.noise_level_changed.connect(_on_noise_level)
 	EventBus.noise_threshold_reached.connect(_on_noise_tier)
 	EventBus.ammo_changed.connect(_on_ammo)
@@ -80,6 +82,7 @@ func _refresh_party() -> void:
 func _on_player_damaged(_amount: float, hp: float) -> void:
 	var player := Net.local_player()
 	if player:
+		$TopLeft/HPLabel.text = GameManager.PLAYABLE_CHARACTERS[player.character_id].to_upper()
 		player_hp.max_value = player.max_hp
 	player_hp.value = hp
 

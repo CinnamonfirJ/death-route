@@ -56,6 +56,14 @@ func _build() -> void:
 	_name_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row1.add_child(_name_edit)
 
+	var character_row := HBoxContainer.new()
+	v.add_child(character_row)
+	character_row.add_child(_label("Character"))
+	var picker := CharacterPicker.new()
+	picker.name = "CharacterPicker"
+	picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	character_row.add_child(picker)
+
 	var row2 := HBoxContainer.new()
 	v.add_child(row2)
 	row2.add_child(_label("Host IP / link"))
@@ -94,6 +102,9 @@ func _build() -> void:
 	_dest = OptionButton.new()
 	for id in LOBBY_LOCATIONS:
 		_dest.add_item(GameManager.LOCATIONS[id].name)
+	var selected := LOBBY_LOCATIONS.find(GameManager.selected_location)
+	if selected >= 0:
+		_dest.select(selected)
 	_dest.item_selected.connect(func(i: int) -> void: Net.set_setting("location", String(LOBBY_LOCATIONS[i])))
 	_dest.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row4.add_child(_dest)
@@ -147,7 +158,8 @@ func _refresh() -> void:
 	var online := Net.is_online()
 	var lines: Array[String] = ["Players (%d/%d):" % [Net.players.size(), Net.MAX_PLAYERS]]
 	for id in Net.players:
-		lines.append("  %s%s" % [Net.peer_name(id), "  (host)" if id == 1 else ""])
+		lines.append("  %s · %s%s" % [Net.peer_name(id),
+			GameManager.PLAYABLE_CHARACTERS[Net.peer_character(id)], "  (host)" if id == 1 else ""])
 	if Net.players.is_empty():
 		lines.append("  (not connected)")
 	else:

@@ -39,8 +39,7 @@ func _draw() -> void:
 			var bob := sin(Time.get_ticks_msec() * 0.006) * 2.0
 			var tip := screen + Vector2(0, bob)
 			draw_colored_polygon(PackedVector2Array([tip, tip + Vector2(-5, -8), tip + Vector2(5, -8)]), color)
-			draw_string_outline(font, tip + Vector2(-20, -11), label, HORIZONTAL_ALIGNMENT_CENTER, 40, 9, 3, Color.BLACK)
-			draw_string(font, tip + Vector2(-20, -11), label, HORIZONTAL_ALIGNMENT_CENTER, 40, 9, color)
+			_draw_label(font, tip + Vector2(0, -11), label, color)
 			continue
 		var center := view.get_center()
 		var dir := (screen - center).normalized()
@@ -64,9 +63,14 @@ func _draw() -> void:
 		if player:
 			dist = roundi(player.global_position.distance_to(target.global_position) / PX_PER_M)
 		var text := "%s %dm" % [label, dist]
-		var text_pos := edge - dir * 22.0 + Vector2(-30, 3)
-		draw_string_outline(font, text_pos, text, HORIZONTAL_ALIGNMENT_CENTER, 60, 9, 3, Color.BLACK)
-		draw_string(font, text_pos, text, HORIZONTAL_ALIGNMENT_CENTER, 60, 9, color)
+		_draw_label(font, edge - dir * 22.0 + Vector2(0, 3), text, color)
+
+
+func _draw_label(font: Font, center: Vector2, text: String, color: Color) -> void:
+	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x
+	var start := center - Vector2(width * 0.5, 0)
+	draw_string_outline(font, start, text, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, 3, Color.BLACK)
+	draw_string(font, start, text, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, color)
 
 
 ## Auto-aim lock: small corner brackets around the zombie you'll hit.

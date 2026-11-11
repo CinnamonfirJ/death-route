@@ -1,5 +1,5 @@
 extends PlayerState
-## Walking/sprinting, facing the mouse, and interacting with nearby objects.
+## Walking, sprinting, and interacting with nearby objects.
 
 var _prompt := ""
 
@@ -24,8 +24,9 @@ func physics_update(delta: float) -> void:
 	if sprinting:
 		EventBus.noise_increased.emit(player.sprint_noise_per_sec * delta, player.global_position)
 
-	# Face the cursor (aim direction). Characters are front-facing art, so only flip.
-	player.sprite.flip_h = player.get_aim_point(true).x < player.global_position.x
+	# Keep the last facing while moving straight up or down, or standing still.
+	if absf(input.x) > 0.05:
+		player.sprite.flip_h = input.x > 0.0  # the source art faces left
 	if player.velocity.length() > 10.0:
 		player.sprite.play(&"run")
 		player.sprite.speed_scale = 1.4 if sprinting else 1.0

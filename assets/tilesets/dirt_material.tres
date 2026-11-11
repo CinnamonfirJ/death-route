@@ -1,0 +1,8 @@
+[gd_resource type="ShaderMaterial" load_steps=3 format=3]
+
+[ext_resource type="Shader" path="res://assets/tilesets/dirt.gdshader" id="1"]
+[ext_resource type="Texture2D" path="res://assets/tilesets/dirt_decals.png" id="2"]
+
+[resource]
+shader = ExtResource("1")
+shader_parameter/decals = ExtResource("2")

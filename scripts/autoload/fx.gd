@@ -53,6 +53,20 @@ func _decals() -> Node:
 
 # ---------- Public effects ----------
 
+## Soft contact shadow in world pixels. It follows the body below the y-sorted sprites.
+func attach_shadow(body: Node2D, size: Vector2, offset := Vector2(0, 2)) -> Sprite2D:
+	var shadow := Sprite2D.new()
+	shadow.texture = _soft
+	shadow.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	shadow.self_modulate = Color(0.09, 0.055, 0.04, 0.68)
+	shadow.scale = size / _soft.get_size()
+	shadow.position = offset
+	shadow.z_as_relative = false
+	shadow.z_index = -4
+	body.add_child(shadow)
+	return shadow
+
+
 func blood(pos: Vector2, dir := Vector2.ZERO, amount := 10) -> void:
 	_burst(pos, {"amount": amount, "color": BLOOD, "speed": Vector2(40, 110), "life": 0.45,
 		"dir": dir, "spread": 50.0 if dir != Vector2.ZERO else 180.0, "size": Vector2(1.0, 2.0),

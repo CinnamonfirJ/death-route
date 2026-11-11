@@ -17,6 +17,7 @@ func _ready() -> void:
 	spr.sprite_frames = Assets.prop_frames(&"explosive_barrel")
 	spr.play(&"default")
 	spr.frame = randi() % 7
+	Fx.attach_shadow(self, Vector2(26, 13), Vector2(1, -2))
 	Fx.attach_glow(self, Color(1.0, 0.55, 0.2, 0.5), 0.9, Vector2(0, -30))
 
 

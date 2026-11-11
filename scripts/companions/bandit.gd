@@ -33,6 +33,7 @@ func _ready() -> void:
 	add_to_group(&"hostiles")
 	sprite.sprite_frames = Assets.character_frames(&"bandit_rival")
 	sprite.play(&"run")
+	Fx.attach_shadow(self, Vector2(22, 9))
 	OneShotEffect.spawn(get_parent(), &"popup_1", global_position + Vector2(0, -36), 1.0, 0.8)
 
 
@@ -47,7 +48,8 @@ func _physics_process(delta: float) -> void:
 		away = Vector2.RIGHT
 	velocity = away * run_speed
 	move_and_slide()
-	sprite.flip_h = velocity.x < 0.0
+	if absf(velocity.x) > 1.0:
+		sprite.flip_h = velocity.x > 0.0
 
 	var dist: float = global_position.distance_to(player.global_position)
 	if dist > escape_distance:

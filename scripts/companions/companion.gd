@@ -71,6 +71,7 @@ func _ready() -> void:
 		display_name = NAMES.pick_random()
 	sprite.sprite_frames = Assets.character_frames(character_id)
 	sprite.play(&"idle")
+	Fx.attach_shadow(self, Vector2(22, 9))
 	hp = max_hp
 	if randf() < start_infected_chance:
 		infect(randf_range(0.15, 0.45))
@@ -260,7 +261,7 @@ func _steer_to(pos: Vector2, speed: float) -> Vector2:
 
 func _animate() -> void:
 	if absf(velocity.x) > 1.0:
-		sprite.flip_h = velocity.x < 0.0
+		sprite.flip_h = velocity.x > 0.0
 	var moving := velocity.length() > 5.0
 	sprite.speed_scale = 2.0 if moving else 1.0
 	# NPC sheets have no run cycle; bob while walking instead.

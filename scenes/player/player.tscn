@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://scripts/player/flashlight.gd" id="9_flash"]
 
@@ -10,6 +10,7 @@
 [ext_resource type="Script" path="res://scripts/player/states/tasking_state.gd" id="6_tasking"]
 [ext_resource type="Script" path="res://scripts/weapons/weapon.gd" id="7_weapon"]
 [ext_resource type="Resource" path="res://resources/weapons/pistol.tres" id="8_pistol"]
+[ext_resource type="Script" path="res://scripts/player/player_outline.gd" id="10_outline"]
 
 [sub_resource type="CircleShape2D" id="body_shape"]
 radius = 6.0
@@ -25,6 +26,10 @@ script = ExtResource("1_player")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
 offset = Vector2(0, -14)
+
+[node name="Outline" type="Node2D" parent="AnimatedSprite2D"]
+show_behind_parent = true
+script = ExtResource("10_outline")
 
 [node name="Weapon" type="Node2D" parent="."]
 position = Vector2(0, -11)

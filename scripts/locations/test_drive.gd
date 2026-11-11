@@ -28,6 +28,9 @@ const PROPS: Array[String] = [
 @export var brutes := 1
 
 var _rng := RandomNumberGenerator.new()
+const PIZZA_SPOTS: Array[Vector2] = [
+	Vector2(-592, -720), Vector2(704, 304), Vector2(-240, 880), Vector2(912, -432),
+]
 
 @onready var pump: HoldTask = $Entities/FuelPumpTask
 
@@ -62,6 +65,10 @@ func _survivor_spots() -> Array[Vector2]:
 	return out
 
 
+func _pizza_spawn_spots() -> Array[Vector2]:
+	return PIZZA_SPOTS
+
+
 func _is_road(cell: Vector2i) -> bool:
 	# Road bands are centered on multiples of road_spacing, so (0,0) is an intersection.
 	var half := road_width >> 1
@@ -81,8 +88,11 @@ func _random_cell(margin := 2) -> Vector2i:
 
 ## Clear of the start area, the pump and the drop.
 func _is_reserved(pos: Vector2) -> bool:
+	for spot in PIZZA_SPOTS:
+		if pos.distance_squared_to(spot) < 48.0 * 48.0:
+			return true
 	return pos.length() < safe_radius or pos.distance_to(pump.position) < 110.0 \
-		or pos.distance_to(extraction.position) < 120.0
+		or pos.distance_to(customer.position) < 120.0
 
 
 ## Ground layer is darkened (see scene modulate); roads sit on their own layer at full brightness.

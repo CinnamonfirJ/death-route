@@ -77,6 +77,8 @@ func _ready() -> void:
 		_randomize_stats()
 	sprite.texture = stats.sprite
 	sprite.scale = Vector2.ONE * SPRITE_SCALE
+	Fx.attach_shadow(self, sprite.texture.get_size() * SPRITE_SCALE + Vector2(15, 15),
+		Vector2(3, 4))
 	_fit_shapes()
 	# Move before other bodies each tick so the riding driver copies this frame's position.
 	process_physics_priority = -1

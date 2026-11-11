@@ -12,6 +12,13 @@ const DEFAULT_SAVE_PATH := "user://save_game.save"
 const SAVE_VERSION := 2
 const CATALOG_PATH := "res://resources/upgrades/upgrade_catalog.tres"
 const GARAGE_SCENE := "res://scenes/ui/garage.tscn"
+const DEFAULT_CHARACTER := &"player_handyman"
+const PLAYABLE_CHARACTERS := {
+	DEFAULT_CHARACTER: "Handyman",
+	&"sheriff": "Sheriff",
+	&"female_scientist": "Scientist",
+	&"female_combat_veteran": "Combat Veteran",
+}
 
 ## Run destinations. "hidden" ones aren't offered in the Garage (dev/test maps).
 const LOCATIONS := {
@@ -20,7 +27,7 @@ const LOCATIONS := {
 	&"camp": {"scene": "res://scenes/locations/camp.tscn", "name": "Survivor Camp",
 		"blurb": "Water pump and radio are down. Half the camp has turned. Deliver to the plaza."},
 	&"wasteland": {"scene": "res://scenes/locations/wasteland.tscn", "name": "Route 9 Gas & Junk",
-		"blurb": "Fix the station pump, hotwire the junkyard generator, drop at the west depot."},
+		"blurb": "Fix the pump and generator. The customer waits at the west depot."},
 	&"sandbox": {"scene": "res://scenes/locations/test_drive.tscn", "name": "Test Drive",
 		"blurb": "Procedural sandbox.", "hidden": true},
 }
@@ -45,6 +52,7 @@ var currency: int = 0
 var upgrade_levels: Dictionary = {}       # String id -> int level
 var weapon_durability: Dictionary = {}    # String weapon id -> float 0..1
 var loadout_weapon: StringName = &"pistol"
+var selected_character: StringName = DEFAULT_CHARACTER
 var selected_location: StringName = &"wasteland"
 var stats := { "runs": 0, "successful_runs": 0, "zombies_killed": 0, "best_run_scrap": 0 }
 
@@ -107,6 +115,12 @@ func launch_run() -> void:
 func set_destination(id: StringName) -> void:
 	if LOCATIONS.has(id):
 		selected_location = id
+		save_game()
+
+
+func set_character(id: StringName) -> void:
+	if PLAYABLE_CHARACTERS.has(id) and id != selected_character:
+		selected_character = id
 		save_game()
 
 
@@ -278,6 +292,7 @@ func save_game() -> void:
 		"upgrade_levels": upgrade_levels,
 		"weapon_durability": weapon_durability,
 		"loadout_weapon": String(loadout_weapon),
+		"selected_character": String(selected_character),
 		"selected_location": String(selected_location),
 		"stats": stats,
 		"last_run": last_run,
@@ -314,6 +329,9 @@ func load_game() -> void:
 	loadout_weapon = StringName(data.get("loadout_weapon", "pistol"))
 	if not is_weapon_available(loadout_weapon):
 		loadout_weapon = &"pistol"
+	selected_character = StringName(data.get("selected_character", DEFAULT_CHARACTER))
+	if not PLAYABLE_CHARACTERS.has(selected_character):
+		selected_character = DEFAULT_CHARACTER
 	selected_location = StringName(data.get("selected_location", "wasteland"))
 	if not LOCATIONS.has(selected_location):
 		selected_location = &"wasteland"
@@ -328,6 +346,7 @@ func reset_save() -> void:
 	upgrade_levels.clear()
 	weapon_durability.clear()
 	loadout_weapon = &"pistol"
+	selected_character = DEFAULT_CHARACTER
 	selected_location = &"wasteland"
 	stats = { "runs": 0, "successful_runs": 0, "zombies_killed": 0, "best_run_scrap": 0 }
 	last_run = {}

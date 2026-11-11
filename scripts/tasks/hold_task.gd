@@ -31,6 +31,7 @@ var is_completed := false
 var _worker: Node = null
 
 @onready var sprite: Sprite2D = $Sprite2D
+var _shadow: Sprite2D
 
 
 func _ready() -> void:
@@ -44,6 +45,10 @@ func _set_region(region: String) -> void:
 	var tex := Assets.region_texture(tileset_id, region)
 	sprite.texture = tex
 	sprite.offset = Vector2(0, -tex.get_height() * 0.5 + 6.0)
+	var shadow_size := Vector2(tex.get_width() * 1.1, maxf(tex.get_height() * 0.45, 12.0))
+	if _shadow:
+		_shadow.queue_free()
+	_shadow = Fx.attach_shadow(self, shadow_size, Vector2(2, 4))
 	if fit_collision:
 		var rect := RectangleShape2D.new()
 		rect.size = Vector2(maxf(tex.get_width() - 4.0, 12.0), maxf(tex.get_height() * 0.5, 10.0))

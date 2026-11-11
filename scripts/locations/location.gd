@@ -4,13 +4,13 @@ extends Node2D
 ## how big it is (map_rect) and where survivors wait (_survivor_spots). This class
 ## handles the rest of a delivery run:
 ##   - jobs: every HoldTask under Entities must be done; objective text + waypoints
-##   - the delivery drop unlocks when all jobs are done; driving in ends the run
+##   - find the pizza, hand it to the customer, and finish jobs to clear the route
 ##   - companions (one at your side + survivors, maybe infected, maybe a rival)
 ##   - death / success -> RunSummary, navmesh bake, map bounds
 ##
 ## Expected scene nodes: Ground, Roads (TileMapLayer), Decals, NavigationRegion2D,
-## SpawnPoints, Bounds, Entities/{Player, Car}, NoiseDirector, CarSpawner,
-## ExtractionZone, RunSummary, GameCamera, HUD.
+## SpawnPoints, Bounds, Entities/{Player, Car, DeliveryCustomer}, NoiseDirector,
+## CarSpawner, RunSummary, GameCamera, HUD.
 
 const WALKER := preload("res://scenes/zombies/walker.tscn")
 const LATCHER := preload("res://scenes/zombies/latcher.tscn")
@@ -19,6 +19,7 @@ const BRUTE := preload("res://scenes/zombies/brute.tscn")
 const CAR_SCENE := preload("res://scenes/car/car.tscn")
 const BARREL_SCENE := preload("res://scenes/props/explosive_barrel.tscn")
 const COMPANION_SCENE := preload("res://scenes/companions/companion.tscn")
+const PIZZA_SCENE := preload("res://scenes/pickups/pizza_cargo.tscn")
 const TILE := 32
 ## Scrap per healthy survivor delivered / per infected one (the camp has a bad night).
 const SURVIVOR_BONUS := 15
@@ -36,7 +37,8 @@ const INFECTED_PENALTY := 20
 
 var tasks: Array[HoldTask] = []
 var _rival_note := ""
-var _player_dead := false
+var _delivered_survivors: Array[Companion] = []
+var pizza: PizzaCargo
 
 @onready var ground: TileMapLayer = $Ground
 @onready var roads: TileMapLayer = $Roads
@@ -44,7 +46,7 @@ var _player_dead := false
 @onready var bounds: StaticBody2D = $Bounds
 @onready var nav_region: NavigationRegion2D = $NavigationRegion2D
 @onready var spawn_points: Node2D = $SpawnPoints
-@onready var extraction: ExtractionZone = $ExtractionZone
+@onready var customer: DeliveryCustomer = $Entities/DeliveryCustomer
 @onready var summary: RunSummary = $RunSummary
 @onready var player: Player = $Entities/Player
 @onready var start_car: Car = $Entities/Car
@@ -52,18 +54,28 @@ var _player_dead := false
 
 func _ready() -> void:
 	_build_world()
+	var dirt: ShaderMaterial = load("res://assets/tilesets/dirt_material.tres")
+	ground.material = dirt
+	var road: ShaderMaterial = dirt.duplicate()
+	road.set_shader_parameter(&"road_surface", true)
+	roads.material = road
 	_build_bounds(map_rect())
 	_build_navigation(map_rect())
+	pizza = PIZZA_SCENE.instantiate()
+	pizza.customer = customer
+	customer.pizza = pizza
+	entities.add_child(pizza)
+	pizza.changed.connect(_on_pizza_changed)
+	if GameManager.phase != GameManager.Phase.RUN:
+		GameManager.start_run(location_id)  # launched directly from the editor
+	EventBus.player_died.connect(_on_player_died)
+	_setup_tasks()
 	if Net.is_online():
 		_setup_online()
 	else:
 		_spawn_dynamic()
 		_spawn_companions()  # AI companions are single-player; human allies replace them online
-	if GameManager.phase != GameManager.Phase.RUN:
-		GameManager.start_run(location_id)  # launched directly from the editor
-	EventBus.player_died.connect(_on_player_died)
-	extraction.reached.connect(_on_drop_reached)
-	_setup_tasks()
+		_place_pizza()
 	EventBus.hud_message.emit.call_deferred(location_name)
 
 
@@ -91,8 +103,10 @@ func _on_all_peers_ready() -> void:
 			continue  # the scene's own Player node is the host's handyman
 		i += 1
 		Net.spawn(entities, "res://scenes/player/player.tscn",
-			{"name": "Player_%d" % id, "position": player.position + Vector2(20 * i, 16)})
+			{"name": "Player_%d" % id, "position": player.position + Vector2(20 * i, 16),
+				"character_id": Net.peer_character(id)})
 	_spawn_dynamic()
+	_place_pizza()
 
 
 ## Shared actors (zombies, spare cars, loot). Subclasses that defer them override this.
@@ -100,7 +114,14 @@ func _spawn_dynamic() -> void:
 	pass
 
 
-func _on_drop_reached() -> void:
+func can_finish_route() -> bool:
+	return pizza != null and pizza.delivered and GameManager.phase == GameManager.Phase.RUN \
+		and tasks.all(func(t: HoldTask) -> bool: return t.is_completed)
+
+
+func finish_route() -> void:
+	if not Net.is_sim_authority() or not can_finish_route():
+		return
 	if Net.is_online():
 		Net.end_run(true)
 	else:
@@ -127,7 +148,7 @@ func finish_networked(success: bool, info: Dictionary) -> void:
 
 # ---------- Subclass hooks ----------
 
-## Build tiles, props, markers; position Player/Car/ExtractionZone.
+## Build tiles, props, markers; position the player, car, and customer.
 func _build_world() -> void:
 	pass
 
@@ -142,6 +163,19 @@ func _survivor_spots() -> Array[Vector2]:
 	return []
 
 
+func _pizza_spawn_spots() -> Array[Vector2]:
+	return []
+
+
+func _place_pizza() -> void:
+	var spots := _pizza_spawn_spots()
+	if spots.is_empty():
+		push_warning("No pizza spawn spots in %s" % location_id)
+		pizza.place(player.global_position + Vector2(0, 32))
+		return
+	pizza.place(spots.pick_random())
+
+
 # ---------- Jobs + objective ----------
 
 func _setup_tasks() -> void:
@@ -150,39 +184,57 @@ func _setup_tasks() -> void:
 			tasks.append(n)
 			n.completed.connect(_on_task_completed)
 			EventBus.waypoint_set.emit.call_deferred(n, "JOB")
-	if tasks.is_empty():
-		_unlock_drop()
-	else:
-		_update_objective.call_deferred()
+	_update_objective.call_deferred()
 
 
 func _on_task_completed(task: HoldTask) -> void:
 	EventBus.waypoint_cleared.emit(task)
-	if tasks.all(func(t: HoldTask) -> bool: return t.is_completed):
-		_unlock_drop()
-	else:
-		_update_objective()
+	_update_objective()
 
 
 func _update_objective() -> void:
-	var lines: Array[String] = ["Jobs at %s:" % location_name]
+	var lines: Array[String] = []
+	if pizza.delivered:
+		EventBus.pizza_status_changed.emit("Pizza delivered")
+		if can_finish_route():
+			lines.append("Finish route from the pause menu" if Net.is_sim_authority()
+				else "The host can finish the route")
+	elif pizza.carrier_id != 0:
+		var carrier := "You have the pizza" if pizza.carrier_id == Net.local_id() \
+			else "%s has the pizza" % Net.peer_name(pizza.carrier_id)
+		EventBus.pizza_status_changed.emit(carrier)
+		lines.append("Bring the pizza to the customer")
+	else:
+		EventBus.pizza_status_changed.emit("Pizza missing")
+		lines.append("Search the area for the pizza")
 	for t in tasks:
 		lines.append(("[x] " if t.is_completed else "[ ] ") + t.task_name)
 	EventBus.objective_changed.emit("\n".join(lines))
 
 
-func _unlock_drop() -> void:
-	extraction.set_active(true)
-	EventBus.waypoint_set.emit(extraction, "DROP")
-	EventBus.objective_changed.emit("Jobs done. Drive a car to the delivery drop.")
-	if not tasks.is_empty():
-		EventBus.hud_message.emit("All jobs done. Get to the drop!")
+func _on_pizza_changed() -> void:
+	if pizza.delivered:
+		EventBus.waypoint_cleared.emit(customer)
+		customer.receive_pizza()
+		EventBus.hud_message.emit("Customer: Thanks for the pizza!")
+		if not Net.is_online():
+			_record_survivors_at_customer()
+	elif pizza.carrier_id != 0:
+		EventBus.waypoint_set.emit(customer, "CUSTOMER")
+	else:
+		EventBus.waypoint_cleared.emit(customer)
+	_update_objective()
+
+
+func _record_survivors_at_customer() -> void:
+	for c: Companion in get_tree().get_nodes_in_group(&"companions"):
+		if c.is_in_party() and c.global_position.distance_to(customer.global_position) <= 100.0:
+			_delivered_survivors.append(c)
 
 
 # ---------- End of run ----------
 
 func _on_player_died() -> void:
-	_player_dead = true
 	if Net.is_online():
 		# Downed, not dead: a teammate can revive. The host ends the run if everyone's down.
 		Net.report_down(true)
@@ -193,10 +245,11 @@ func _on_player_died() -> void:
 
 func _finish(success: bool, extra_in := {}) -> void:
 	var me: Player = Net.local_player()
-	var extra := {"survivors": 0, "infected_delivered": 0, "location": String(location_id)}
+	var extra := {"survivors": 0, "infected_delivered": 0, "location": String(location_id),
+		"pizza_delivered": pizza.delivered}
 	extra.merge(extra_in, true)
-	if success and me and me.current_car:
-		for c in me.current_car.passengers:
+	if success:
+		for c in _delivered_survivors:
 			if not is_instance_valid(c):
 				continue
 			if c.is_rival():
@@ -221,10 +274,10 @@ func _finish(success: bool, extra_in := {}) -> void:
 
 ## One companion at your side, plus survivors to find (some bitten, maybe one rival).
 func _spawn_companions() -> void:
-	var sprites := [&"npc_companion_a", &"npc_companion_b"]
+	var cast := [&"npc_companion_a", &"npc_companion_b"]
 	if starting_companion:
 		var c: Companion = COMPANION_SCENE.instantiate()
-		c.character_id = sprites[0]
+		c.character_id = cast[0]
 		c.position = player.position + Vector2(-20, 24)
 		entities.add_child(c)
 		c.join.call_deferred()
@@ -236,7 +289,7 @@ func _spawn_companions() -> void:
 	var i := 0
 	for pos in _survivor_spots():
 		var s: Companion = COMPANION_SCENE.instantiate()
-		s.character_id = sprites[(i + 1) % sprites.size()]
+		s.character_id = cast[(i + 1) % cast.size()]
 		s.start_infected_chance = survivor_infected_chance
 		s.position = pos
 		if not rival_assigned and randf() < survivor_rival_chance:
@@ -292,6 +345,7 @@ func make_prop(tileset_id: String, region: String, pos: Vector2, solid := true) 
 	body.position = pos
 	body.collision_layer = 1 if solid else 0
 	body.collision_mask = 0
+	Fx.attach_shadow(body, Vector2(size.x * 1.1, maxf(size.y * 0.45, 12.0)), Vector2(2, 4))
 	var spr := Sprite2D.new()
 	spr.texture = tex
 	spr.offset = Vector2(0, -size.y * 0.5 + 6.0)

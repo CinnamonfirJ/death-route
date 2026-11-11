@@ -4,6 +4,7 @@ extends CanvasLayer
 
 var _root: Control
 var _dim: ColorRect
+var _finish_button: Button
 
 
 func _ready() -> void:
@@ -32,6 +33,13 @@ func _ready() -> void:
 	resume.text = "Resume"
 	resume.pressed.connect(close)
 	v.add_child(resume)
+	_finish_button = Button.new()
+	_finish_button.name = "FinishRoute"
+	_finish_button.text = "Finish route"
+	_finish_button.hide()
+	_finish_button.pressed.connect(_finish_route)
+	v.add_child(_finish_button)
+	EventBus.objective_changed.connect(func(_text: String) -> void: _refresh_finish_button())
 	var quit := Button.new()
 	quit.name = "Abandon"
 	quit.text = "Abandon run (keep half scrap)"
@@ -66,6 +74,7 @@ func open() -> void:
 	if summary and summary.visible:
 		return  # run's already over
 	visible = true
+	_refresh_finish_button()
 	if not Net.is_online():
 		get_tree().paused = true
 
@@ -74,6 +83,18 @@ func close() -> void:
 	visible = false
 	if not Net.is_online():
 		get_tree().paused = false
+
+
+func _refresh_finish_button() -> void:
+	var loc := _level() as Location
+	_finish_button.visible = loc != null and Net.is_sim_authority() and loc.can_finish_route()
+
+
+func _finish_route() -> void:
+	var loc := _level() as Location
+	if loc and loc.can_finish_route():
+		close()
+		loc.finish_route()
 
 
 func _abandon() -> void:
