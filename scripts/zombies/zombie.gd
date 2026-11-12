@@ -43,6 +43,11 @@ var _rush_clock := 0.0
 @export var dies_to_ram := true
 @export var corpse_lifetime := 4.0
 
+@export_group("Ambient Audio")
+@export var ambient_voice_range := 220.0
+@export var ambient_voice_interval := Vector2(3.5, 8.0)
+@export var ambient_voice_volume_db := -5.0
+
 @export_group("Loot")
 ## Scrap dropped on death: random in [x, y]. (0, 0) = none.
 @export var scrap_drop := Vector2i(0, 1)
@@ -110,6 +115,7 @@ func _ready() -> void:
 	sprite.frame = randi() % sprite.sprite_frames.get_frame_count(&"idle")
 	_wander_timer = randf_range(0.5, 3.0)
 	_repath_cd = randf() * REPATH_INTERVAL  # stagger path queries across the horde
+	_groan_cd = randf_range(0.0, ambient_voice_interval.x)
 	Net.attach_sync(self, [".:position"],
 		[".:is_dead", ".:hp", ".:z_index", "AnimatedSprite2D:animation", "AnimatedSprite2D:flip_h",
 		"AnimatedSprite2D:rotation", "AnimatedSprite2D:modulate", "AnimatedSprite2D:speed_scale",
@@ -346,7 +352,7 @@ func stun(seconds: float, knockback := Vector2.ZERO) -> void:
 
 var _seen_hp := -1.0
 var _seen_dead := false
-var _groan_cd := randf_range(2.0, 12.0)
+var _groan_cd := 0.0
 
 
 ## Ambient groans, only for zombies near this machine's player (cosmetic, every peer).
@@ -358,10 +364,12 @@ func _process(delta: float) -> void:
 	_groan_cd -= delta
 	if _groan_cd > 0.0:
 		return
-	_groan_cd = randf_range(7.0, 16.0)
 	var me := Net.local_player() as Node2D
-	if me and me.global_position.distance_to(global_position) < 450.0:
-		Sfx.play(voice, global_position, -3.0, 0.15)
+	if not me or me.global_position.distance_squared_to(global_position) > ambient_voice_range ** 2:
+		_groan_cd = ambient_voice_interval.x
+		return
+	_groan_cd = randf_range(ambient_voice_interval.x, ambient_voice_interval.y)
+	Sfx.play_zombie_ambience(voice, global_position, ambient_voice_volume_db)
 
 
 ## Shuffling feet near you: quiet, positional (panned left/right), so you can tell

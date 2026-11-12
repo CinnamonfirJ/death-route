@@ -1,4 +1,4 @@
-"""Synthesizes Dead Route's sound effects as 16-bit mono WAVs (standard library only).
+"""Synthesizes Dead Route's sound effects and score as 16-bit mono WAVs.
 
 Usage:  python -I tools/gen_sfx.py assets/audio [names...]
 Everything here is generated from scratch (no samples), so it's free to ship.
@@ -118,8 +118,10 @@ def fade_tail(sig, sec=0.01):
     return out
 
 
-def write(path, sig, peak=0.85):
-    sig = fade_tail(normalize(sig, peak))
+def write(path, sig, peak=0.85, loop=False):
+    sig = normalize(sig, peak)
+    if not loop:
+        sig = fade_tail(sig)
     with wave.open(path, "wb") as w:
         w.setnchannels(1)
         w.setsampwidth(2)
@@ -290,6 +292,42 @@ def horn():
     return [s * min(1.0, i / (0.01 * RATE), (n - i) / (0.04 * RATE)) for i, s in enumerate(sig)]
 
 
+def night_route():
+    """Slow minor-key score with overlapping pads and a sparse bell motif."""
+    bar = 4.0
+    chords = [
+        (38, 50, 57, 64), (34, 53, 57, 60), (31, 50, 57, 58), (33, 52, 55, 62),
+        (38, 50, 57, 65), (34, 53, 60, 64), (31, 50, 57, 58), (33, 52, 55, 61),
+    ]
+    track = silence(len(chords) * bar)
+
+    def frequency(note):
+        return 440 * 2 ** ((note - 69) / 12)
+
+    def layer(signal, start, gain, attack, release):
+        offset = round(start * RATE)
+        for i, sample in enumerate(signal):
+            fade = min(1, i / (attack * RATE), (len(signal) - 1 - i) / (release * RATE))
+            track[(offset + i) % len(track)] += sample * gain * fade
+
+    for i, (bass, *chord) in enumerate(chords):
+        start = i * bar - 0.45
+        for note in chord:
+            hz = frequency(note)
+            pad = mix(tone(hz, 5.4), tone(hz * 1.003, 5.4, "triangle"), gains=[0.6, 0.4])
+            layer(pad, start, 0.10, 1.4, 1.55)
+        layer(tone(frequency(bass + 12), 3.8), i * bar, 0.12, 0.8, 1.7)
+
+    for beat, note in [(1.25, 69), (3, 72), (6.5, 65), (10, 67), (14, 64),
+                       (17, 69), (19, 76), (23, 72), (26.5, 67), (29.5, 64)]:
+        hz = frequency(note)
+        bell = mix(tone(hz, 1.9), tone(hz * 2.01, 1.9), gains=[0.8, 0.2])
+        bell = env(bell, attack=0.05, decay=0.47)
+        layer(bell, beat, 0.22, 0.02, 0.30)
+        layer(bell, beat + 0.48, 0.055, 0.02, 0.30)
+    return track
+
+
 RECIPES = {
     "pistol": pistol, "shotgun": shotgun, "reload": reload, "jam": jam,
     "hit_flesh": hit_flesh, "zombie_die": zombie_die,
@@ -306,6 +344,7 @@ RECIPES = {
                             env(bandpass(noise(0.21), 600, 2200), decay=0.06), gains=[0.7, 0.55]),
     "zombie_skitter": lambda: zombie_attack(190),
     "zombie_guard": lambda: zombie_attack(71),
+    "night_route": night_route,
 }
 
 if __name__ == "__main__":
@@ -316,5 +355,5 @@ if __name__ == "__main__":
         if only and name not in only:
             continue
         path = os.path.join(out_dir, name + ".wav")
-        write(path, fn(), peak=0.8 if name != "engine" else 0.6)
+        write(path, fn(), peak=0.8 if name != "engine" else 0.6, loop=name == "night_route")
         print("wrote", path)

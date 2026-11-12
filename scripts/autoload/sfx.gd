@@ -3,9 +3,12 @@ extends Node
 ##   Sfx.play(&"pistol", global_position)   positional (fades with distance)
 ##   Sfx.play(&"pickup")                    non-positional (UI / your own events)
 ##   Sfx.loop_player(&"engine", parent)     a looping 2D player you control (car engines)
-## Volume follows the "sfx_volume" setting via the "SFX" audio bus.
+## Sound effects and the score have independent volume settings.
 
 const DIR := "res://assets/audio/"
+const MUSIC_PATH := "res://assets/audio/night_route.wav"
+const SFX_BUS := &"SFX"
+const MUSIC_BUS := &"Music"
 ## Logical name -> variants (one is picked at random).
 const SOUNDS := {
 	&"pistol": ["pistol"], &"shotgun": ["shotgun"], &"reload": ["reload"], &"jam": ["jam"],
@@ -27,18 +30,23 @@ const POOL_UI := 6
 ## Same sound again within this many ms is skipped (shotgun pellets, crowds).
 const THROTTLE_MS := 35
 
+@export var music_level_db := -15.0
+## Minimum time between idle calls, shared by the horde on this client.
+@export var zombie_voice_spacing := 1.25
+
 var _streams := {}
 var _last_played := {}
 var _pool_2d: Array[AudioStreamPlayer2D] = []
 var _pool_ui: Array[AudioStreamPlayer] = []
 var _next_2d := 0
 var _next_ui := 0
-var _bus := "Master"
+var _next_zombie_voice_ms := 0
 
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	_setup_bus()
+	_ensure_bus(SFX_BUS)
+	_ensure_bus(MUSIC_BUS)
 	for key in SOUNDS:
 		var list: Array[AudioStream] = []
 		for file in SOUNDS[key]:
@@ -54,38 +62,64 @@ func _ready() -> void:
 			stream.loop_end = int(stream.get_length() * stream.mix_rate)
 	for i in POOL_2D:
 		var p := AudioStreamPlayer2D.new()
-		p.bus = _bus
+		p.bus = SFX_BUS
 		p.max_distance = 900.0
 		p.attenuation = 1.6
 		add_child(p)
 		_pool_2d.append(p)
 	for i in POOL_UI:
 		var p := AudioStreamPlayer.new()
-		p.bus = _bus
+		p.bus = SFX_BUS
 		add_child(p)
 		_pool_ui.append(p)
 	GameManager.settings_changed.connect(_apply_volume)
 	_apply_volume()
+	if DisplayServer.get_name() != "headless":
+		_start_music()
 	EventBus.noise_threshold_reached.connect(func(t: int) -> void:
 		if t >= 2:
 			play(&"alert"))
 
 
-func _setup_bus() -> void:
-	var idx := AudioServer.get_bus_index("SFX")
-	if idx == -1:
-		AudioServer.add_bus()
-		idx = AudioServer.bus_count - 1
-		AudioServer.set_bus_name(idx, "SFX")
-		AudioServer.set_bus_send(idx, "Master")
-	_bus = "SFX"
+func _ensure_bus(bus: StringName) -> void:
+	if AudioServer.get_bus_index(bus) != -1:
+		return
+	AudioServer.add_bus()
+	var idx := AudioServer.bus_count - 1
+	AudioServer.set_bus_name(idx, bus)
+	AudioServer.set_bus_send(idx, &"Master")
 
 
 func _apply_volume() -> void:
-	var v := float(GameManager.get_setting("sfx_volume"))
-	var idx := AudioServer.get_bus_index(_bus)
-	AudioServer.set_bus_volume_db(idx, linear_to_db(maxf(v, 0.0001)))
-	AudioServer.set_bus_mute(idx, v <= 0.001)
+	_set_bus_volume(SFX_BUS, float(GameManager.get_setting("sfx_volume")))
+	_set_bus_volume(MUSIC_BUS, float(GameManager.get_setting("music_volume")))
+
+
+func _set_bus_volume(bus: StringName, volume: float) -> void:
+	var idx := AudioServer.get_bus_index(bus)
+	AudioServer.set_bus_volume_db(idx, linear_to_db(maxf(volume, 0.0001)))
+	AudioServer.set_bus_mute(idx, volume <= 0.001)
+
+
+func _start_music() -> void:
+	var stream := load(MUSIC_PATH) as AudioStreamWAV
+	if stream == null:
+		return
+	var score := AudioStreamPlayer.new()
+	score.name = "Score"
+	score.bus = MUSIC_BUS
+	score.volume_db = music_level_db
+	score.stream = stream
+	add_child(score)
+	score.play()
+
+
+func play_zombie_ambience(sound: StringName, pos: Vector2, volume_db: float) -> void:
+	var now := Time.get_ticks_msec()
+	if now < _next_zombie_voice_ms or sound.is_empty():
+		return
+	_next_zombie_voice_ms = now + int(zombie_voice_spacing * 1000.0)
+	play(sound, pos, volume_db, 0.15)
 
 
 ## Plays a sound. With a position it's 2D (attenuated); without, it's flat.
@@ -121,7 +155,7 @@ func play(sound: StringName, pos: Variant = null, volume_db := 0.0, pitch_jitter
 func loop_player(sound: StringName, parent: Node) -> AudioStreamPlayer2D:
 	var list: Array = _streams.get(sound, [])
 	var p := AudioStreamPlayer2D.new()
-	p.bus = _bus
+	p.bus = SFX_BUS
 	p.max_distance = 700.0
 	p.attenuation = 1.8
 	if not list.is_empty():

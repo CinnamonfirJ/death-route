@@ -60,6 +60,7 @@ var run_scores: Array = []
 ## Player options (saved). Auto-aim on by default for casual play; hardcore players switch it off.
 const DEFAULT_SETTINGS := {
 	"auto_aim": true, "auto_run": false, "sfx_volume": 0.8, "screen_shake": 1.0,
+	"music_volume": 0.6,
 	"lighting_mode": "night",
 	"room_brightness": 0.5,
 	"touch_shooting": "drag",

@@ -44,7 +44,8 @@ func _ready() -> void:
 	add_child(lighting)
 	_slider("Room brightness", "room_brightness", 0.0, 1.0,
 		"Night mode only. Left is darker, right is brighter.")
-	_slider("Sound volume", "sfx_volume", 0.0, 1.0)
+	_slider("Sound effects", "sfx_volume", 0.0, 1.0)
+	_slider("Music volume", "music_volume", 0.0, 1.0)
 	_slider("Screen shake", "screen_shake", 0.0, 1.5)
 	_toggle("Voice chat mic", "voice_enabled", "Lets nearby players hear you in online matches. Off by default.")
 	var voice_mode := OptionButton.new()
