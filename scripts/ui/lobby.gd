@@ -28,11 +28,16 @@ var _ready_btn: Button
 var _dest: OptionButton
 var _rival: CheckButton
 var _host_box: Control
+var _panel: PanelContainer
+var _mobile := false
 
 
 func _ready() -> void:
+	_mobile = TouchLayout.enabled()
 	theme = Assets.ui_theme()
 	_build()
+	get_viewport().size_changed.connect(_layout)
+	_layout()
 	Net.roster_changed.connect(_refresh)
 	Net.status_changed.connect(func(t: String) -> void: _status.text = t)
 	_refresh()
@@ -42,11 +47,7 @@ func _ready() -> void:
 func _build() -> void:
 	TitleStyle.add_backdrop(self)
 	var panel := PanelContainer.new()
-	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	panel.offset_left = -230
-	panel.offset_right = 230
-	panel.offset_top = -174
-	panel.offset_bottom = 174
+	_panel = panel
 	add_child(panel)
 	var frame := VBoxContainer.new()
 	panel.add_child(frame)
@@ -66,9 +67,14 @@ func _build() -> void:
 	title.add_theme_color_override(&"font_color", TitleStyle.AMBER)
 	v.add_child(title)
 
+	var entry: Container = HBoxContainer.new() if _mobile else VBoxContainer.new()
+	entry.add_theme_constant_override(&"separation", 12 if _mobile else 5)
+	v.add_child(entry)
 	_identity = VBoxContainer.new()
-	v.add_child(_identity)
-	var row1 := HBoxContainer.new()
+	_identity.custom_minimum_size.x = 162 if _mobile else 0
+	_identity.add_theme_constant_override(&"separation", 8)
+	entry.add_child(_identity)
+	var row1: Container = VBoxContainer.new() if _mobile else HBoxContainer.new()
 	_identity.add_child(row1)
 	row1.add_child(_label("Name"))
 	_name_edit = LineEdit.new()
@@ -76,17 +82,20 @@ func _build() -> void:
 	_name_edit.text = Net.my_name
 	_name_edit.max_length = 16
 	_name_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_style_field(_name_edit)
 	row1.add_child(_name_edit)
 
-	var character_row := HBoxContainer.new()
+	var character_row: Container = VBoxContainer.new() if _mobile else HBoxContainer.new()
 	_identity.add_child(character_row)
 	character_row.add_child(_label("Character"))
 	var picker := CharacterPicker.new()
 	picker.name = "CharacterPicker"
 	picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	if _mobile:
+		TouchLayout.button(picker)
 	character_row.add_child(picker)
 
-	_add_browser(v)
+	_add_browser(entry)
 	var room_row := HBoxContainer.new()
 	v.add_child(room_row)
 	_room_title = _label("")
@@ -108,6 +117,9 @@ func _build() -> void:
 	_roster.fit_content = true
 	_roster.scroll_active = false
 	_roster.add_theme_font_size_override(&"normal_font_size", 10)
+	if _mobile:
+		_roster.add_theme_font_override(&"normal_font", ThemeDB.fallback_font)
+		_roster.add_theme_font_size_override(&"normal_font_size", 14)
 	v.add_child(_roster)
 
 	# Everyone (versus): pick a side + ready up.
@@ -173,6 +185,8 @@ func _build() -> void:
 	_status.add_theme_font_size_override(&"font_size", 9)
 	_status.add_theme_color_override(&"font_color", TitleStyle.MUTED)
 	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	if _mobile:
+		TouchLayout.label(_status, 13)
 	frame.add_child(_status)
 
 	_button(frame, "BACK TO GARAGE", func() -> void:
@@ -184,6 +198,8 @@ func _label(text: String) -> Label:
 	var l := Label.new()
 	l.text = text
 	l.custom_minimum_size = Vector2(70, 0)
+	if _mobile:
+		TouchLayout.label(l)
 	return l
 
 
@@ -193,13 +209,28 @@ func _button(parent: Control, text: String, cb: Callable) -> Button:
 	b.name = text.replace(" ", "")
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	b.custom_minimum_size.y = 22
+	if _mobile:
+		TouchLayout.button(b, 13, 34)
 	b.pressed.connect(cb)
 	parent.add_child(b)
 	return b
 
 
+func _layout() -> void:
+	TouchLayout.fit_panel(_panel, TouchLayout.safe_rect(get_viewport()),
+		Vector2(552 if _mobile else 460, 348), 6)
+
+
+func _style_field(field: LineEdit) -> void:
+	if _mobile:
+		field.custom_minimum_size.y = 35
+		field.add_theme_font_override(&"font", ThemeDB.fallback_font)
+		field.add_theme_font_size_override(&"font_size", 14)
+
+
 func _add_browser(parent: Control) -> void:
 	_browser = VBoxContainer.new()
+	_browser.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_browser.add_theme_constant_override(&"separation", 5)
 	parent.add_child(_browser)
 	var create := HBoxContainer.new()
@@ -207,6 +238,8 @@ func _add_browser(parent: Control) -> void:
 	_public = CheckButton.new()
 	_public.text = "List publicly"
 	_public.button_pressed = true
+	if _mobile:
+		TouchLayout.button(_public, 13, 34)
 	create.add_child(_public)
 	_host_btn = _button(create, "CREATE ROOM", _on_host)
 	TitleStyle.primary(_host_btn)
@@ -217,6 +250,7 @@ func _add_browser(parent: Control) -> void:
 	_code_edit.max_length = 6
 	_code_edit.placeholder_text = "6-character room code"
 	_code_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_style_field(_code_edit)
 	_code_edit.text_submitted.connect(func(_value: String) -> void: _on_join())
 	join.add_child(_code_edit)
 	_join_btn = _button(join, "JOIN CODE", _on_join)
@@ -230,6 +264,11 @@ func _add_browser(parent: Control) -> void:
 	_button(directory, "REFRESH", _fetch_rooms).size_flags_horizontal = Control.SIZE_FILL
 	_rooms = ItemList.new()
 	_rooms.custom_minimum_size.y = 57
+	if _mobile:
+		_rooms.add_theme_font_override(&"font", ThemeDB.fallback_font)
+		_rooms.add_theme_font_size_override(&"font_size", 14)
+		_rooms.add_theme_constant_override(&"v_separation", 15)
+		_rooms.custom_minimum_size.y = 75
 	_rooms.item_activated.connect(func(_index: int) -> void: _join_selected())
 	_browser.add_child(_rooms)
 	_button(_browser, "JOIN SELECTED ROOM", _join_selected)

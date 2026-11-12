@@ -23,6 +23,11 @@ const FAIL_LINES := [
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	panel.theme = Assets.ui_theme()
+	if TouchLayout.enabled():
+		TouchLayout.label(flavor, 14)
+		TouchLayout.label(details, 14)
+		TouchLayout.button(back_button)
+		TitleStyle.primary(back_button)
 	visible = false
 	back_button.pressed.connect(GameManager.goto_garage)
 

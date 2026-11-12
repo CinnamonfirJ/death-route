@@ -15,6 +15,11 @@ const CAR_CONTROLS := "WASD Drive · Space Handbrake · Q Shove · H Horn · E E
 var _car: Car
 var _kills := 0
 var _weapon_icon := AtlasTexture.new()
+var _touch_hud := false
+var _status_cards: Array[Panel] = []
+var _route_button: Button
+var _route_card: PanelContainer
+var _route_text: Label
 
 @onready var player_hp: Range = %PlayerHP
 @onready var car_panel: Control = %CarPanel
@@ -56,7 +61,7 @@ func _ready() -> void:
 	EventBus.noise_threshold_reached.connect(_on_noise_tier)
 	EventBus.ammo_changed.connect(_refresh_weapon.unbind(3))
 	EventBus.weapon_switched.connect(_refresh_weapon)
-	EventBus.objective_changed.connect(func(t: String) -> void: objective.text = t)
+	EventBus.objective_changed.connect(_set_objectives)
 	EventBus.hud_message.connect(_banner)
 	EventBus.weapon_jammed.connect(func() -> void: _banner("*click*  JAMMED. Maintain your gun."))
 	EventBus.scrap_collected.connect(func(_a: int) -> void:
@@ -70,10 +75,96 @@ func _ready() -> void:
 	EventBus.player_exited_car.connect(_on_exited_car)
 	EventBus.car_damaged.connect(_on_car_changed.unbind(2))
 	EventBus.car_fuel_changed.connect(_on_car_changed.unbind(2))
-	EventBus.interact_prompt_changed.connect(func(t: String) -> void: prompt.text = t)
+	EventBus.interact_prompt_changed.connect(func(t: String) -> void:
+		prompt.text = t.replace("[E]", "Use").replace("[Hold E]", "Hold Use") if _touch_hud else t)
 	EventBus.zombie_killed.connect(_on_zombie_killed)
 	var feed: Control = load("res://scripts/ui/kill_feed.gd").new()
 	add_child(feed)
+	set_touch_layout.call_deferred($TouchControls.active)
+
+
+func set_touch_layout(enabled: bool) -> void:
+	if not enabled or _touch_hud or not is_node_ready():
+		return
+	_touch_hud = true
+	var left := $TopLeft as VBoxContainer
+	var right := $TopRight as VBoxContainer
+	kills.reparent(right, false)
+	right.move_child(kills, 0)
+	objective.hide()
+	right.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	for column in [left, right]:
+		column.add_theme_constant_override(&"separation", 3)
+		var card := Panel.new()
+		card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		card.add_theme_stylebox_override(&"panel", TitleStyle.surface(Color(TitleStyle.INK, 0.90), TitleStyle.BORDER, 0))
+		add_child(card)
+		move_child(card, column.get_index())
+		_status_cards.append(card)
+		column.minimum_size_changed.connect(_layout_touch_hud.call_deferred)
+	for element in [left.get_node(^"HPLabel"), light_status, party, car_name, speed,
+			kills, scrap_label, noise_label, weapon_name, ammo, %PizzaLabel, prompt]:
+		TouchLayout.label(element, 12)
+	party.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	%PizzaLabel.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	%PizzaLabel.custom_minimum_size.x = 106
+
+	_route_button = Button.new()
+	_route_button.toggle_mode = true
+	_route_button.text = "Objectives"
+	_route_button.focus_mode = Control.FOCUS_NONE
+	_route_button.theme = Assets.ui_theme()
+	TouchLayout.button(_route_button)
+	add_child(_route_button)
+	_route_card = PanelContainer.new()
+	_route_card.theme = Assets.ui_theme()
+	_route_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_route_card)
+	var route_scroll := ScrollContainer.new()
+	route_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_route_card.add_child(route_scroll)
+	_route_text = Label.new()
+	_route_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_route_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	TouchLayout.label(_route_text)
+	route_scroll.add_child(_route_text)
+	_route_card.hide()
+	_route_button.toggled.connect(func(open: bool) -> void:
+		_route_card.visible = open
+		_layout_touch_hud())
+	get_viewport().size_changed.connect(_layout_touch_hud)
+	_set_objectives(objective.text)
+	_layout_touch_hud()
+
+
+func _layout_touch_hud() -> void:
+	if not _touch_hud or not is_instance_valid(_route_card):
+		return
+	var safe := TouchLayout.safe_rect(get_viewport())
+	var columns := [$TopLeft, $TopRight]
+	for i in columns.size():
+		var column: VBoxContainer = columns[i]
+		var width := 150.0
+		column.position = Vector2(safe.position.x + 16.0 if i == 0 else safe.end.x - width - 16.0,
+			safe.position.y + 13.0)
+		column.size = Vector2(width, column.get_combined_minimum_size().y)
+		_status_cards[i].position = column.position - Vector2(7, 6)
+		_status_cards[i].size = column.size + Vector2(14, 12)
+	_route_button.position = Vector2(safe.get_center().x - 74, safe.position.y + 7)
+	_route_button.size.x = 148
+	var width := clampf(safe.size.x - 354.0, 145.0, 258.0)
+	_route_card.position = Vector2(safe.get_center().x - width / 2.0, _route_button.position.y + 44)
+	_route_card.size = Vector2(width, minf(148.0, safe.size.y * 0.42))
+
+
+func _set_objectives(text: String) -> void:
+	objective.text = text
+	if not _touch_hud or not is_instance_valid(_route_text):
+		return
+	_route_text.text = text.replace("[ ] ", "• ").replace("[x] ", "✓ ")
+	var remaining := text.count("[ ] ")
+	_route_button.text = "Objectives · %d" % remaining if remaining else "Objectives"
+	_layout_touch_hud.call_deferred()
 
 
 func _process(delta: float) -> void:
@@ -97,7 +188,7 @@ func _refresh_party() -> void:
 		if c.is_in_party():
 			lines.append("%s · %s · %d%%" % [c.display_name, MODE_TEXT.get(int(c.mode), "?"),
 				roundi(c.hp / c.max_hp * 100.0)])
-	party.text = "\n".join(lines)
+	party.text = ("%d survivor%s" % [lines.size(), "" if lines.size() == 1 else "s"]) if _touch_hud else "\n".join(lines)
 	party.visible = not lines.is_empty()
 
 

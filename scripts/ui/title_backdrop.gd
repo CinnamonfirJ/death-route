@@ -56,6 +56,9 @@ func _draw() -> void:
 	if _ground == null:
 		return
 	var scale_to_fit := minf(size.x / ART_SIZE.x, size.y / ART_SIZE.y)
+	if size.aspect() > ART_SIZE.aspect():
+		# Fill more of a short landscape window while keeping the set pieces in view.
+		scale_to_fit = minf(scale_to_fit * 1.20, size.x / ART_SIZE.x)
 	draw_rect(Rect2(Vector2.ZERO, size), Color("#0a0814"))
 	draw_set_transform((size - ART_SIZE * scale_to_fit) * 0.5, 0.0, Vector2.ONE * scale_to_fit)
 	var clearing := Rect2(35, 35, 570, 290)

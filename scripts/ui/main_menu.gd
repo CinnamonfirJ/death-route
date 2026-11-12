@@ -11,17 +11,21 @@ var _play: Button
 var _wallet: Button
 var _status: Label
 var _wallet_actions: VBoxContainer
+var _frame: PanelContainer
+var _footer: VBoxContainer
+var _mobile := false
 
 
 func _ready() -> void:
 	GameManager.phase = GameManager.Phase.MENU
+	_mobile = TouchLayout.enabled()
 	theme = Assets.ui_theme()
 	TitleStyle.add_backdrop(self)
 	_menu = CenterContainer.new()
-	_menu.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_menu.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 	add_child(_menu)
 	var stack := VBoxContainer.new()
-	stack.custom_minimum_size.x = 254
+	stack.custom_minimum_size.x = 404 if _mobile else 274
 	stack.add_theme_constant_override(&"separation", 8)
 	_menu.add_child(stack)
 	var title := _label("DEAD ROUTE", 38, CREAM)
@@ -30,8 +34,9 @@ func _ready() -> void:
 	title.add_theme_constant_override(&"shadow_offset_y", 5)
 	stack.add_child(title)
 	_play = _button(stack, "PLAY", GameManager.goto_garage, true)
-	_play.custom_minimum_size = Vector2(165, 29)
-	_play.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_play.custom_minimum_size = Vector2(180, 48) if _mobile else Vector2(180, 32)
+	if not _mobile:
+		_play.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override(&"separation", 6)
 	stack.add_child(row)
@@ -43,6 +48,8 @@ func _ready() -> void:
 	stack.add_child(secondary)
 	_wallet = _button(secondary, "SIGN IN WITH GOOGLE", _show_wallet)
 	_button(secondary, "SETTINGS", _show_settings)
+	get_viewport().size_changed.connect(_layout)
+	_layout()
 	WalletSession.changed.connect(_refresh_wallet)
 	_refresh_wallet()
 	_play.grab_focus()
@@ -141,22 +148,19 @@ func _open(title: String) -> void:
 	dim.color = Color(0.025, 0.019, 0.055, 0.75)
 	_overlay.add_child(dim)
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var center := CenterContainer.new()
-	_overlay.add_child(center)
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var frame := PanelContainer.new()
-	frame.custom_minimum_size.x = 334
-	frame.add_theme_stylebox_override(&"panel", TitleStyle.surface(TitleStyle.INK, TitleStyle.BORDER, 14))
-	center.add_child(frame)
-	_panel = VBoxContainer.new()
-	_panel.add_theme_constant_override(&"separation", 7)
-	frame.add_child(_panel)
+	_frame = PanelContainer.new()
+	_frame.add_theme_stylebox_override(&"panel", TitleStyle.surface(TitleStyle.INK, TitleStyle.BORDER, 14))
+	_overlay.add_child(_frame)
+	_footer = VBoxContainer.new()
+	_frame.add_child(_footer)
+	_panel = TouchLayout.scroll(_footer)
+	_layout()
 	if not title.is_empty():
 		_panel.add_child(_label(title, 17, AMBER))
 
 
 func _close_button(focus := true) -> void:
-	var close := _button(_panel, "BACK", _close)
+	var close := _button(_footer, "BACK", _close)
 	if focus:
 		close.grab_focus()
 
@@ -167,9 +171,18 @@ func _close() -> void:
 	remove_child(_overlay)
 	_overlay.queue_free()
 	_overlay = null
+	_frame = null
 	_status = null
 	_menu.show()
 	_play.grab_focus()
+
+
+func _layout() -> void:
+	var bounds := TouchLayout.safe_rect(get_viewport()) if _mobile else get_viewport_rect()
+	_menu.position = bounds.position
+	_menu.size = bounds.size
+	if is_instance_valid(_frame):
+		TouchLayout.fit_panel(_frame, bounds, Vector2(424, 332))
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -180,7 +193,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _copy(value: String, color := MUTED) -> Label:
 	var label := _label(value, 10, color)
-	label.custom_minimum_size.x = 296
+	if _mobile:
+		TouchLayout.label(label, 14)
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_panel.add_child(label)
 	return label
@@ -201,6 +215,8 @@ func _button(parent: Container, value: String, action: Callable, primary := fals
 	button.custom_minimum_size.y = 24
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.add_theme_font_size_override(&"font_size", 12 if primary else 10)
+	if _mobile:
+		TouchLayout.button(button, 16 if primary else 14)
 	if primary:
 		TitleStyle.primary(button)
 	button.pressed.connect(action)

@@ -10,8 +10,13 @@ var _region := GUN_CURSOR
 var _tint := Color.WHITE
 var _show := false
 var _cursor_hidden := false
+var _touch := false
 
 @onready var _pause_menu: CanvasLayer = $"../PauseMenu"
+
+
+func _ready() -> void:
+	_touch = TouchLayout.enabled()
 
 
 func _process(_delta: float) -> void:
@@ -23,7 +28,7 @@ func _process(_delta: float) -> void:
 	if _show:
 		var weapon := player.weapon
 		_region = KNIFE_CURSOR if weapon.knife_equipped else GUN_CURSOR
-		_tint = Color.WHITE
+		_tint = TitleStyle.AMBER if player.touch_mode and player.touch_fire else Color.WHITE
 		_position = mouse
 		if weapon.knife_equipped or player.touch_mode:
 			var reach := Weapon.KNIFE_REACH if weapon.knife_equipped else 96.0
@@ -36,7 +41,8 @@ func _process(_delta: float) -> void:
 
 func _draw() -> void:
 	if _show:
-		draw_texture_rect_region(SHEET, Rect2(_position.round() - _region.size * 0.5, _region.size), _region, _tint)
+		var extent := _region.size * (1.25 if _touch else 1.0)
+		draw_texture_rect_region(SHEET, Rect2(_position.round() - extent * 0.5, extent), _region, _tint)
 
 
 func _exit_tree() -> void:

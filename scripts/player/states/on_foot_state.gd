@@ -58,7 +58,7 @@ func physics_update(delta: float) -> void:
 		w.request_switch()
 	var fire := false
 	if player.touch_mode:
-		# Holding the aim stick fires at the gun's rate. (Touches also emulate mouse
+		# TouchControls drives fire at the gun's rate. (Touches also emulate mouse
 		# clicks, so the mouse "shoot" action is ignored in touch mode.)
 		fire = player.touch_fire
 	else:

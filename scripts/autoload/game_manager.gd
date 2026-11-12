@@ -62,6 +62,7 @@ const DEFAULT_SETTINGS := {
 	"auto_aim": true, "auto_run": false, "sfx_volume": 0.8, "screen_shake": 1.0,
 	"lighting_mode": "night",
 	"room_brightness": 0.5,
+	"touch_shooting": "drag",
 	"voice_enabled": false, "voice_mode": "push", "voice_volume": 0.8, "voice_mute_others": false,
 }
 var settings := DEFAULT_SETTINGS.duplicate()

@@ -5,6 +5,7 @@ extends CanvasLayer
 var _root: Control
 var _dim: ColorRect
 var _finish_button: Button
+var _panel: PanelContainer
 
 
 func _ready() -> void:
@@ -14,10 +15,11 @@ func _ready() -> void:
 	_dim.color = Color(TitleStyle.INK, 0.72)
 	_dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(_dim)
-	var center := CenterContainer.new()
+	var center := Control.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(center)
 	var panel := PanelContainer.new()
+	_panel = panel
 	panel.theme = Assets.ui_theme()
 	center.add_child(panel)
 	var v := VBoxContainer.new()
@@ -27,15 +29,18 @@ func _ready() -> void:
 	title.text = "PAUSED" if not Net.is_online() else "MENU (game keeps running)"
 	title.add_theme_font_size_override(&"font_size", 16)
 	v.add_child(title)
-	v.add_child(SettingsPanel.new())
+	TouchLayout.scroll(v).add_child(SettingsPanel.new())
 	var resume := Button.new()
 	resume.name = "Resume"
 	resume.text = "Resume"
+	TouchLayout.button(resume)
+	TitleStyle.primary(resume)
 	resume.pressed.connect(close)
 	v.add_child(resume)
 	_finish_button = Button.new()
 	_finish_button.name = "FinishRoute"
 	_finish_button.text = "Finish route"
+	TouchLayout.button(_finish_button, 14, 34)
 	_finish_button.hide()
 	_finish_button.pressed.connect(_finish_route)
 	v.add_child(_finish_button)
@@ -43,10 +48,17 @@ func _ready() -> void:
 	var quit := Button.new()
 	quit.name = "Abandon"
 	quit.text = "Abandon run (keep half scrap)"
+	TouchLayout.button(quit, 14, 34)
 	quit.pressed.connect(_abandon)
 	v.add_child(quit)
 	_root = center
+	get_viewport().size_changed.connect(_layout)
+	_layout()
 	visible = false
+
+
+func _layout() -> void:
+	TouchLayout.fit_panel(_panel, TouchLayout.safe_rect(get_viewport()), Vector2(430, 338))
 
 
 func _unhandled_input(event: InputEvent) -> void:

@@ -20,6 +20,8 @@ const STARTER_CAR := &"delivery_hatch"
 @onready var start_button: Button = %StartButton
 @onready var destinations: HBoxContainer = %Destinations
 @onready var dest_blurb: Label = %DestBlurb
+var _mobile := false
+var _settings_frame: PanelContainer
 
 ## Short button labels for the destination row.
 const DEST_SHORT := {&"hospital": "Hospital", &"camp": "Camp", &"wasteland": "Route 9"}
@@ -28,6 +30,7 @@ const DEST_SHORT := {&"hospital": "Hospital", &"camp": "Camp", &"wasteland": "Ro
 func _ready() -> void:
 	get_tree().paused = false
 	GameManager.phase = GameManager.Phase.GARAGE
+	_mobile = TouchLayout.enabled()
 	theme = Assets.ui_theme()
 	scrap_icon.texture = Assets.item_icon("scrap")
 	start_button.pressed.connect(GameManager.launch_run)
@@ -40,6 +43,10 @@ func _ready() -> void:
 	_build_tabs()
 	_build_destinations()
 	_refresh()
+	if _mobile:
+		_prepare_mobile_garage()
+	get_viewport().size_changed.connect(_layout)
+	_layout()
 	WalletSession.changed.connect(_refresh)
 	WalletSession.refresh_ownership()
 	start_button.grab_focus()
@@ -61,7 +68,7 @@ func _add_settings_button() -> void:
 	b.add_theme_font_size_override(&"font_size", 9)
 	header.add_child(b)
 	header.move_child(b, scrap_icon.get_index())
-	var overlay := CenterContainer.new()
+	var overlay := Control.new()
 	overlay.name = "SettingsOverlay"
 	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
 	overlay.visible = false
@@ -77,18 +84,59 @@ func _add_settings_button() -> void:
 	layer.add_child(overlay)
 	dim.visible = false
 	var panel := PanelContainer.new()
+	_settings_frame = panel
 	overlay.add_child(panel)
 	var v := VBoxContainer.new()
 	panel.add_child(v)
-	v.add_child(SettingsPanel.new())
+	TouchLayout.scroll(v).add_child(SettingsPanel.new())
 	var close := Button.new()
 	close.text = "Done"
+	TouchLayout.button(close)
 	v.add_child(close)
 	var show := func(on: bool) -> void:
 		overlay.visible = on
 		dim.visible = on
+		if on:
+			_layout()
+			close.grab_focus()
 	b.pressed.connect(show.bind(true))
 	close.pressed.connect(show.bind(false))
+
+
+func _layout() -> void:
+	var bounds := TouchLayout.safe_rect(get_viewport()) if _mobile else get_viewport_rect()
+	if _mobile:
+		TouchLayout.fit_panel($Margin, bounds, Vector2(830, 420), 4.0)
+	if is_instance_valid(_settings_frame):
+		TouchLayout.fit_panel(_settings_frame, bounds, Vector2(430, 332))
+
+
+func _prepare_mobile_garage() -> void:
+	$Margin.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	var side_panel := $Margin/VBox/Body/SidePanel
+	var side := side_panel.get_node(^"Side") as VBoxContainer
+	var actions := side.get_node(^"StartRow") as HBoxContainer
+	var frame := VBoxContainer.new()
+	frame.add_theme_constant_override(&"separation", 7)
+	side_panel.add_child(frame)
+	var content := TouchLayout.scroll(frame)
+	side.reparent(content, false)
+	side.add_theme_constant_override(&"separation", 6)
+	actions.reparent(frame, false)
+	side.get_node(^"Spacer").hide()
+	side.move_child(side.get_node(^"DestLabel"), 0)
+	side.move_child(destinations, 1)
+	side.move_child(dest_blurb, 5)
+	side_panel.custom_minimum_size.x = 280
+	$Margin/VBox/Body.move_child(side_panel, 0)
+	for button_node in [$Margin/VBox/Header.get_child(0), $Margin/VBox/Header/SettingsButton,
+			start_button, %CoopButton, side.get_node(^"CharacterRow/CharacterPicker")]:
+		TouchLayout.button(button_node)
+	for label_node in [last_run, lifetime, dest_blurb, car_stats_label, side.get_node(^"LoadoutLabel"),
+			side.get_node(^"DestLabel"), side.get_node(^"CharacterRow/CharacterLabel")]:
+		TouchLayout.label(label_node, 12)
+	tabs.add_theme_font_override(&"font", ThemeDB.fallback_font)
+	tabs.add_theme_font_size_override(&"font_size", 13)
 
 
 func _build_tabs() -> void:
@@ -168,6 +216,9 @@ func _upgrade_row(u: UpgradeDef) -> Control:
 	desc.add_theme_font_size_override(&"font_size", 8)
 	desc.add_theme_color_override(&"font_color", TitleStyle.MUTED)
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	if _mobile:
+		TouchLayout.label(head, 14)
+		TouchLayout.label(desc, 12)
 	text.add_child(head)
 	text.add_child(desc)
 	row.add_child(text)
@@ -188,6 +239,8 @@ func _upgrade_row(u: UpgradeDef) -> Control:
 			Sfx.play(&"pickup")
 			_refresh())
 	row.add_child(button)
+	if _mobile:
+		TouchLayout.button(button, 13, 32)
 	return row
 
 
@@ -216,6 +269,9 @@ func _maintenance_row(id: StringName) -> Control:
 	note.text = "Condition %d%%%s" % [roundi(durability * 100.0),
 		"  · may jam!" if durability < 0.35 else ""]
 	note.add_theme_font_size_override(&"font_size", 8)
+	if _mobile:
+		TouchLayout.label(head, 14)
+		TouchLayout.label(note, 12)
 	text.add_child(head)
 	text.add_child(bar)
 	text.add_child(note)
@@ -232,6 +288,8 @@ func _maintenance_row(id: StringName) -> Control:
 		if GameManager.repair_weapon(id):
 			_refresh())
 	row.add_child(button)
+	if _mobile:
+		TouchLayout.button(button, 13, 32)
 	return row
 
 
@@ -248,6 +306,8 @@ func _refresh_loadout() -> void:
 		b.icon = _weapon_icon(id)
 		b.add_theme_constant_override(&"icon_max_width", 18)
 		b.add_theme_font_size_override(&"font_size", 9)
+		if _mobile:
+			TouchLayout.button(b, 13, 34)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.pressed.connect(func() -> void:
 			GameManager.set_loadout(id)
@@ -265,6 +325,8 @@ func _build_destinations() -> void:
 		b.toggle_mode = true
 		b.text = DEST_SHORT.get(id, loc.name)
 		b.add_theme_font_size_override(&"font_size", 9)
+		if _mobile:
+			TouchLayout.button(b, 12, 34)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.pressed.connect(_select_destination.bind(id))
 		destinations.add_child(b)
@@ -291,7 +353,7 @@ func _refresh_car() -> void:
 	var base: CarStats = load("res://resources/cars/%s.tres" % STARTER_CAR)
 	var s := GameManager.upgraded_car_stats(base)
 	car_sprite.texture = s.sprite
-	car_stats_label.add_theme_font_size_override(&"font_size", 8)
+	car_stats_label.add_theme_font_size_override(&"font_size", 12 if _mobile else 8)
 	car_stats_label.text = "%s\nHP %d · Fuel %d\nTop speed %d km/h\nRam x%.2f · Latch resist %d%%" % [
 		s.display_name, roundi(s.max_hp), roundi(s.fuel_capacity), roundi(s.top_speed * 0.36),
 		s.ram_mult, roundi(s.latch_resist * 100.0)]

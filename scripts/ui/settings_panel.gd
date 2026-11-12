@@ -10,8 +10,31 @@ func _ready() -> void:
 	title.text = "SETTINGS"
 	title.add_theme_color_override(&"font_color", TitleStyle.AMBER)
 	add_child(title)
-	_toggle("Auto-aim", "auto_aim", "Snaps your aim to the zombie nearest your crosshair. Off = hardcore.")
-	_toggle("Auto-run", "auto_run", "Always sprint without holding Shift / RUN. Sprinting is noisier.")
+	if OS.has_feature("web") and TouchLayout.enabled() and bool(JavaScriptBridge.eval("document.fullscreenEnabled", true)):
+		var full := Button.new()
+		full.text = "Toggle fullscreen"
+		TouchLayout.button(full)
+		full.pressed.connect(func() -> void: JavaScriptBridge.eval("window.deadRouteToggleFullscreen?.()", true))
+		add_child(full)
+	var touch_mode := OptionButton.new()
+	touch_mode.name = "TouchShooting"
+	touch_mode.add_item("Touch shooting: Drag to fire")
+	touch_mode.add_item("Touch shooting: Advanced")
+	touch_mode.select(1 if GameManager.get_setting("touch_shooting") == "advanced" else 0)
+	TouchLayout.button(touch_mode)
+	add_child(touch_mode)
+	var touch_hint := _hint("")
+	var update_shooting := func(index: int) -> void:
+		if index == 1:
+			touch_hint.text = "Aim with the right stick. Hold Fire separately."
+		else:
+			touch_hint.text = "Aim with the right stick. Drag past the ring to fire. Release to stop."
+	update_shooting.call(touch_mode.selected)
+	touch_mode.item_selected.connect(func(index: int) -> void:
+		GameManager.set_setting("touch_shooting", "advanced" if index == 1 else "drag")
+		update_shooting.call(index))
+	_toggle("Auto-aim", "auto_aim", "Snaps your aim to the zombie nearest your crosshair.")
+	_toggle("Auto-run", "auto_run", "Always sprint without holding Shift or Run.")
 	var lighting := OptionButton.new()
 	lighting.name = "LightingMode"
 	lighting.add_item("Lighting  /  Night")
@@ -19,6 +42,7 @@ func _ready() -> void:
 	lighting.select(1 if GameManager.get_setting("lighting_mode") == "classic" else 0)
 	lighting.item_selected.connect(func(i: int) -> void:
 		GameManager.set_setting("lighting_mode", "night" if i == 0 else "classic"))
+	TouchLayout.button(lighting)
 	add_child(lighting)
 	_slider("Room brightness", "room_brightness", 0.0, 1.0,
 		"Night mode only. Left is darker, right is brighter.")
@@ -32,6 +56,7 @@ func _ready() -> void:
 	voice_mode.select(1 if GameManager.get_setting("voice_mode") == "open" else 0)
 	voice_mode.item_selected.connect(func(i: int) -> void:
 		GameManager.set_setting("voice_mode", "push" if i == 0 else "open"))
+	TouchLayout.button(voice_mode)
 	add_child(voice_mode)
 	_slider("Voice volume", "voice_volume", 0.0, 1.0)
 	_toggle("Mute other players", "voice_mute_others", "Silences everyone's voice chat for you.")
@@ -44,21 +69,27 @@ func _toggle(label: String, key: String, hint: String) -> void:
 	c.tooltip_text = hint
 	c.button_pressed = GameManager.get_setting(key)
 	c.toggled.connect(func(on: bool) -> void: GameManager.set_setting(key, on))
+	TouchLayout.button(c, 14, 34)
 	add_child(c)
+
+
+func _hint(copy: String) -> Label:
 	var h := Label.new()
-	h.text = hint
-	h.add_theme_font_size_override(&"font_size", 8)
+	h.text = copy
+	TouchLayout.label(h, 12)
 	h.add_theme_color_override(&"font_color", TitleStyle.MUTED)
 	h.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	h.custom_minimum_size = Vector2(220, 0)
 	add_child(h)
+	return h
 
 
 func _slider(label: String, key: String, lo: float, hi: float, hint := "") -> void:
 	var row := HBoxContainer.new()
 	var l := Label.new()
 	l.text = label
-	l.custom_minimum_size = Vector2(90, 0)
+	TouchLayout.label(l)
+	l.custom_minimum_size = Vector2(110, 0)
 	row.add_child(l)
 	var s := HSlider.new()
 	s.name = key
@@ -67,7 +98,7 @@ func _slider(label: String, key: String, lo: float, hi: float, hint := "") -> vo
 	s.max_value = hi
 	s.step = 0.05
 	s.value = GameManager.get_setting(key)
-	s.custom_minimum_size = Vector2(120, 16)
+	s.custom_minimum_size = Vector2(120, 32)
 	s.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	s.value_changed.connect(func(v: float) -> void: GameManager.set_setting(key, v))
 	row.add_child(s)
