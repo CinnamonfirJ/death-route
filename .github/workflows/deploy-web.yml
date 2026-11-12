@@ -21,7 +21,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Install Godot and its matching Web template
         shell: bash
@@ -49,7 +51,7 @@ jobs:
           python3 tools/package_cloudflare_web.py build/web build/pages
 
       - name: Save the packaged Web build
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: dead-route-cloudflare
           path: build/pages/
@@ -66,10 +68,35 @@ jobs:
             echo "::warning::Build complete. Add the CLOUDFLARE_API_TOKEN Actions secret to enable deployment."
           fi
 
+      - name: Set up Node.js 24 for Wrangler
+        if: steps.credentials.outputs.configured == 'true'
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
       - name: Publish to dead-route.pages.dev
         if: steps.credentials.outputs.configured == 'true'
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: d088a4356754db5a5c087e01f50af5fc
-          command: pages deploy build/pages --project-name=dead-route --branch=main
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: d088a4356754db5a5c087e01f50af5fc
+          WRANGLER_SEND_METRICS: 'false'
+        run: |
+          set -euo pipefail
+          project_url="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/dead-route"
+          status="$(curl --silent --show-error --retry 2 --max-time 20 --output /dev/null \
+            --write-out '%{http_code}' --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "$project_url/upload-token")"
+          case "$status" in
+            200) ;;
+            401|403)
+              echo "::error::Cloudflare rejected CLOUDFLARE_API_TOKEN. Check that it has Account > Cloudflare Pages > Edit for the account that owns dead-route and allows requests from GitHub-hosted runners."
+              exit 1
+              ;;
+            *)
+              echo "::error::Cloudflare could not issue a Pages upload token (HTTP $status). Check the account, project, and Cloudflare service status."
+              exit 1
+              ;;
+          esac
+          npx --yes wrangler@4.161.0 pages deploy build/pages --project-name=dead-route --branch=main
