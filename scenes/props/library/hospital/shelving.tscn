@@ -1,0 +1,12 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/rooms/prop.gd" id="1_87vh3"]
+[ext_resource type="Texture2D" path="res://assets/tilesets/interior_32.png" id="2_ijt0c"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_jrsux"]
+atlas = ExtResource("2_ijt0c")
+region = Rect2(224, 360, 32, 36)
+
+[node name="Shelving" type="StaticBody2D" unique_id=666010186]
+script = ExtResource("1_87vh3")
+texture = SubResource("AtlasTexture_jrsux")

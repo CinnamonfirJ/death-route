@@ -1,0 +1,12 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/rooms/prop.gd" id="1_gikjs"]
+[ext_resource type="Texture2D" path="res://assets/tilesets/interior_32.png" id="2_qjsr3"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_nww5n"]
+atlas = ExtResource("2_qjsr3")
+region = Rect2(216, 480, 40, 32)
+
+[node name="GurneyBloody" type="StaticBody2D" unique_id=1633759]
+script = ExtResource("1_gikjs")
+texture = SubResource("AtlasTexture_nww5n")

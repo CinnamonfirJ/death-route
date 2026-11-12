@@ -1,13 +1,20 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1_hud"]
 [ext_resource type="Script" path="res://scripts/ui/waypoint_overlay.gd" id="2_wp"]
 [ext_resource type="Script" path="res://scripts/ui/touch_controls.gd" id="3_touch"]
 [ext_resource type="Script" path="res://scripts/ui/pause_menu.gd" id="4_pause"]
 [ext_resource type="Shader" path="res://assets/ui/vignette.gdshader" id="5_vignette"]
+[ext_resource type="Script" path="res://scripts/ui/player_health_meter.gd" id="6_health"]
+[ext_resource type="Script" path="res://scripts/ui/player_reticle.gd" id="7_reticle"]
+[ext_resource type="Texture2D" path="res://assets/ui/healthbars_icons.png" id="8_icons"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_vignette"]
 shader = ExtResource("5_vignette")
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_weapon_badge"]
+atlas = ExtResource("8_icons")
+region = Rect2(0, 24, 24, 24)
 
 [node name="HUD" type="CanvasLayer"]
 script = ExtResource("1_hud")
@@ -43,13 +50,18 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 9
 text = "HANDYMAN"
 
-[node name="PlayerHP" type="ProgressBar" parent="TopLeft"]
+[node name="PlayerHP" type="Range" parent="TopLeft"]
 unique_name_in_owner = true
-self_modulate = Color(1, 0.35, 0.35, 1)
-custom_minimum_size = Vector2(120, 7)
 layout_mode = 2
+mouse_filter = 2
 value = 100.0
-show_percentage = false
+script = ExtResource("6_health")
+
+[node name="LightStatus" type="Label" parent="TopLeft"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 8
+text = "LIGHT OFF"
 
 [node name="Party" type="Label" parent="TopLeft"]
 unique_name_in_owner = true
@@ -130,7 +142,41 @@ custom_minimum_size = Vector2(120, 7)
 layout_mode = 2
 show_percentage = false
 
-[node name="Ammo" type="Label" parent="TopRight"]
+[node name="WeaponStatus" type="HBoxContainer" parent="TopRight"]
+layout_mode = 2
+alignment = 2
+
+[node name="WeaponBadge" type="TextureRect" parent="TopRight/WeaponStatus"]
+custom_minimum_size = Vector2(24, 24)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = SubResource("AtlasTexture_weapon_badge")
+
+[node name="WeaponIcon" type="TextureRect" parent="TopRight/WeaponStatus/WeaponBadge"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 4.0
+offset_top = 4.0
+offset_right = 20.0
+offset_bottom = 20.0
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="WeaponText" type="VBoxContainer" parent="TopRight/WeaponStatus"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 0
+
+[node name="WeaponName" type="Label" parent="TopRight/WeaponStatus/WeaponText"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.4, 1)
+theme_override_font_sizes/font_size = 9
+horizontal_alignment = 2
+
+[node name="Ammo" type="Label" parent="TopRight/WeaponStatus/WeaponText"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 11
@@ -207,7 +253,6 @@ offset_right = 632.0
 offset_bottom = -4.0
 grow_vertical = 0
 theme_override_font_sizes/font_size = 8
-text = "WASD move/drive · Shift sprint · LMB shoot · R reload · E interact/hold · F flashlight · Space handbrake · Q shove"
 
 [node name="Message" type="Label" parent="."]
 unique_name_in_owner = true
@@ -238,6 +283,15 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("3_touch")
+
+[node name="Reticle" type="Control" parent="."]
+process_mode = 3
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("7_reticle")
 
 [node name="PauseMenu" type="CanvasLayer" parent="."]
 script = ExtResource("4_pause")

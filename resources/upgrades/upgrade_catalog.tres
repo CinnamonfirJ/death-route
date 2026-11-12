@@ -7,7 +7,6 @@
 [ext_resource type="Resource" path="res://resources/upgrades/armored_glass.tres" id="5_yjw58"]
 [ext_resource type="Resource" path="res://resources/upgrades/reinforced_chassis.tres" id="6_beea1"]
 [ext_resource type="Resource" path="res://resources/upgrades/long_range_tank.tres" id="7_23dyg"]
-[ext_resource type="Resource" path="res://resources/upgrades/shotgun_license.tres" id="8_i2inh"]
 [ext_resource type="Resource" path="res://resources/upgrades/hollow_points.tres" id="9_5xi10"]
 [ext_resource type="Resource" path="res://resources/upgrades/extended_mags.tres" id="10_4i3c0"]
 [ext_resource type="Resource" path="res://resources/upgrades/muffled_barrel.tres" id="11_xx3ig"]
@@ -18,4 +17,4 @@
 
 [resource]
 script = ExtResource("1_gcwbl")
-upgrades = Array[ExtResource("2_onqam")]([ExtResource("3_g0mdf"), ExtResource("4_yjweb"), ExtResource("5_yjw58"), ExtResource("6_beea1"), ExtResource("7_23dyg"), ExtResource("8_i2inh"), ExtResource("9_5xi10"), ExtResource("10_4i3c0"), ExtResource("11_xx3ig"), ExtResource("12_ag4ni"), ExtResource("13_27x1k"), ExtResource("14_jlpxp"), ExtResource("15_77j33")])
+upgrades = Array[ExtResource("2_onqam")]([ExtResource("3_g0mdf"), ExtResource("4_yjweb"), ExtResource("5_yjw58"), ExtResource("6_beea1"), ExtResource("7_23dyg"), ExtResource("9_5xi10"), ExtResource("10_4i3c0"), ExtResource("11_xx3ig"), ExtResource("12_ag4ni"), ExtResource("13_27x1k"), ExtResource("14_jlpxp"), ExtResource("15_77j33")])

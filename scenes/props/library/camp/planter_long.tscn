@@ -1,0 +1,12 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/rooms/prop.gd" id="1_uw4el"]
+[ext_resource type="Texture2D" path="res://assets/tilesets/camp.png" id="2_10hgu"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_4r3yq"]
+atlas = ExtResource("2_10hgu")
+region = Rect2(47, 759, 65, 25)
+
+[node name="PlanterLong" type="StaticBody2D" unique_id=440041074]
+script = ExtResource("1_uw4el")
+texture = SubResource("AtlasTexture_4r3yq")

@@ -1,6 +1,6 @@
 """Synthesizes Dead Route's sound effects as 16-bit mono WAVs (standard library only).
 
-Usage:  python -I tools/gen_sfx.py assets/audio
+Usage:  python -I tools/gen_sfx.py assets/audio [names...]
 Everything here is generated from scratch (no samples), so it's free to ship.
 Re-run to regenerate; tweak the recipes below to taste.
 """
@@ -259,6 +259,37 @@ def engine():
     return sig[: n - x]
 
 
+def knife_swing():
+    return env(bandpass(noise(0.16), 1800, 6000), attack=0.03, decay=0.05)
+
+
+def knife_hit():
+    stab = env(lowpass(noise(0.1), 2200, 500), decay=0.025)
+    thud = env(tone(140, 0.08, sweep_to=70), decay=0.025)
+    return mix(stab, thud, gains=[0.9, 0.6])
+
+
+def zombie_step(pitch):
+    scuff = env(lowpass(noise(0.12), 700 * pitch, 250), attack=0.01, decay=0.035)
+    thud = env(tone(70 * pitch, 0.07, sweep_to=45 * pitch), decay=0.02)
+    return mix(scuff, thud, gains=[0.7, 0.5])
+
+
+def zombie_attack(base):
+    snarl = lowpass(tone(base, 0.32, "saw", 18, 0.12, sweep_to=base * 1.25), 1100)
+    rasp = bandpass(noise(0.32), 400, 2200)
+    return env(mix(snarl, rasp, gains=[0.8, 0.45]), attack=0.015, decay=0.11)
+
+
+def horn():
+    dur = 0.55
+    a = tone(392, dur, "square")
+    b = tone(494, dur, "square")
+    sig = lowpass(mix(a, b), 1800)
+    n = len(sig)
+    return [s * min(1.0, i / (0.01 * RATE), (n - i) / (0.04 * RATE)) for i, s in enumerate(sig)]
+
+
 RECIPES = {
     "pistol": pistol, "shotgun": shotgun, "reload": reload, "jam": jam,
     "hit_flesh": hit_flesh, "zombie_die": zombie_die,
@@ -266,12 +297,24 @@ RECIPES = {
     "explosion": explosion, "crash": crash, "ram": ram, "pickup": pickup,
     "task_work": task_work, "task_done": task_done, "cough": cough, "player_hurt": player_hurt,
     "alert": alert, "ui_click": ui_click, "engine": engine,
+    "knife_swing": knife_swing, "knife_hit": knife_hit,
+    "zombie_step_1": lambda: zombie_step(1.0), "zombie_step_2": lambda: zombie_step(0.8),
+    "zombie_attack_1": lambda: zombie_attack(130), "zombie_attack_2": lambda: zombie_attack(105),
+    "horn": horn,
+    "generator_hum": lambda: mix(tone(60, 1.0), tone(120, 1.0), tone(240, 1.0), gains=[0.8, 0.25, 0.08]),
+    "acid_tick": lambda: mix(env(tone(390, 0.18, sweep_to=120), decay=0.06),
+                            env(bandpass(noise(0.21), 600, 2200), decay=0.06), gains=[0.7, 0.55]),
+    "zombie_skitter": lambda: zombie_attack(190),
+    "zombie_guard": lambda: zombie_attack(71),
 }
 
 if __name__ == "__main__":
     out_dir = sys.argv[1] if len(sys.argv) > 1 else "assets/audio"
     os.makedirs(out_dir, exist_ok=True)
+    only = set(sys.argv[2:])  # optional: just these sounds
     for name, fn in RECIPES.items():
+        if only and name not in only:
+            continue
         path = os.path.join(out_dir, name + ".wav")
         write(path, fn(), peak=0.8 if name != "engine" else 0.6)
         print("wrote", path)

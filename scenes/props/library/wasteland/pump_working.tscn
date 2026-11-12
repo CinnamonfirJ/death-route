@@ -1,0 +1,12 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/rooms/prop.gd" id="1_3oix1"]
+[ext_resource type="Texture2D" path="res://assets/tilesets/wasteland_32.png" id="2_10sxf"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_27daq"]
+atlas = ExtResource("2_10sxf")
+region = Rect2(136, 360, 48, 64)
+
+[node name="PumpWorking" type="StaticBody2D" unique_id=352252052]
+script = ExtResource("1_3oix1")
+texture = SubResource("AtlasTexture_27daq")

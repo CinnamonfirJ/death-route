@@ -31,18 +31,28 @@ func _ready() -> void:
 	theme = Assets.ui_theme()
 	scrap_icon.texture = Assets.item_icon("scrap")
 	start_button.pressed.connect(GameManager.launch_run)
+	_style_start_button()
 	%CoopButton.pressed.connect(func() -> void:
 		get_tree().change_scene_to_file("res://scenes/ui/lobby.tscn"))
 	_add_settings_button()
 	_build_tabs()
 	_build_destinations()
 	_refresh()
+	WalletSession.changed.connect(_refresh)
+	WalletSession.refresh_ownership()
 	start_button.grab_focus()
 
 
 ## Header button that opens the shared settings panel in an overlay.
 func _add_settings_button() -> void:
 	var header := $Margin/VBox/Header
+	var back := Button.new()
+	back.text = "TITLE"
+	back.add_theme_font_size_override(&"font_size", 9)
+	back.pressed.connect(func() -> void:
+		get_tree().change_scene_to_file(GameManager.MAIN_MENU_SCENE))
+	header.add_child(back)
+	header.move_child(back, 0)
 	var b := Button.new()
 	b.name = "SettingsButton"
 	b.text = "SETTINGS"
@@ -77,6 +87,18 @@ func _add_settings_button() -> void:
 		dim.visible = on
 	b.pressed.connect(show.bind(true))
 	close.pressed.connect(show.bind(false))
+
+
+func _style_start_button() -> void:
+	for state in [&"normal", &"hover", &"pressed"]:
+		var style := StyleBoxFlat.new()
+		style.bg_color = Color("#e8a65b") if state == &"normal" else Color("#ffc987")
+		style.border_color = Color("#713f2b")
+		style.set_border_width_all(2)
+		style.set_corner_radius_all(2)
+		start_button.add_theme_stylebox_override(state, style)
+	for state in [&"font_color", &"font_focus_color", &"font_hover_color", &"font_pressed_color"]:
+		start_button.add_theme_color_override(state, Color("#201623"))
 
 
 func _build_tabs() -> void:
@@ -114,15 +136,16 @@ func _refresh() -> void:
 	_refresh_destinations()
 	_refresh_car()
 	var s := GameManager.stats
-	lifetime.text = "Runs: %d  ·  Delivered: %d\nKills: %d  ·  Best haul: %d" % [
+	lifetime.text = "Runs %d  ·  Delivered %d  ·  Kills %d  ·  Best haul %d" % [
 		s.runs, s.successful_runs, s.zombies_killed, s.best_run_scrap]
 
 
 func _refresh_last_run() -> void:
 	var r := GameManager.last_run
 	if r.is_empty():
-		last_run.text = "First day on the job. Buy something, then go deliver."
+		last_run.hide()
 		return
+	last_run.show()
 	last_run.text = "Last run: %s  ·  +%d scrap banked  ·  %d kills  ·  %s at %d%%" % [
 		"DELIVERED" if r.success else "FAILED (half scrap kept)", r.scrap_banked, r.kills,
 		String(r.weapon).capitalize(), roundi(float(r.durability) * 100.0)]
@@ -189,7 +212,7 @@ func _maintenance_row(id: StringName) -> Control:
 	var text := VBoxContainer.new()
 	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var head := Label.new()
-	head.text = stats.display_name if available else "%s  (locked)" % stats.display_name
+	head.text = stats.display_name if available else "%s  (NFT required)" % stats.display_name
 	head.add_theme_font_size_override(&"font_size", 10)
 	var bar := ProgressBar.new()
 	bar.custom_minimum_size = Vector2(0, 7)
@@ -211,7 +234,7 @@ func _maintenance_row(id: StringName) -> Control:
 	button.custom_minimum_size = Vector2(68, 0)
 	button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var cost := GameManager.repair_cost(id)
-	button.text = "Repair %d" % cost if cost > 0 else "Mint"
+	button.text = "Repair %d" % cost if cost > 0 else "Ready"
 	button.disabled = cost <= 0 or cost > GameManager.currency or not available
 	button.pressed.connect(func() -> void:
 		if GameManager.repair_weapon(id):
@@ -231,6 +254,7 @@ func _refresh_loadout() -> void:
 		b.disabled = not GameManager.is_weapon_available(id)
 		b.text = stats.display_name if not b.disabled else "%s (locked)" % stats.display_name
 		b.icon = _weapon_icon(id)
+		b.add_theme_constant_override(&"icon_max_width", 18)
 		b.add_theme_font_size_override(&"font_size", 9)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.pressed.connect(func() -> void:
@@ -267,7 +291,7 @@ func _refresh_destinations() -> void:
 		selected = GameManager.LOCATIONS[&"wasteland"]
 	for button: Button in destinations.get_children():
 		button.set_pressed_no_signal(button.name == GameManager.selected_location)
-	dest_blurb.text = "%s: %s" % [selected.name, selected.blurb]
+	dest_blurb.text = selected.blurb
 
 
 ## Shows the starter car with all purchased upgrades applied.

@@ -4,6 +4,8 @@ extends Node
 
 # --- Noise ---
 signal noise_increased(amount: float, source_position: Vector2)
+## A sound zombies can hear: anything within `radius` px of `pos` goes to investigate.
+signal sound_made(pos: Vector2, radius: float)
 signal noise_level_changed(level: float, max_level: float)
 signal noise_threshold_reached(tier: int)
 
@@ -43,6 +45,7 @@ signal hud_message(text: String)
 
 # --- Weapons ---
 signal ammo_changed(in_mag: int, reserve: int, reloading: bool)
+signal weapon_switched
 signal weapon_jammed
 
 # --- Companions / infection ---

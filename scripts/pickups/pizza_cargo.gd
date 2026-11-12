@@ -1,12 +1,16 @@
 class_name PizzaCargo
 extends Node2D
-## One shared pizza per run. The host decides pickup, drop, and handoff.
+## Co-op: one shared pizza per run. Versus: one per team (team >= 0), created by
+## MatchState, hidden until its spawn timer runs out. The host decides pickup, drop,
+## handoff (and in versus, steal / reset by enemies).
 
 signal changed
 
 const REACH := 38.0
 
 var customer: Node2D
+## Versus: owning team (-1 = co-op shared pizza).
+var team := -1
 var carrier_id := 0
 var delivered := false
 var _spawned := false
@@ -21,6 +25,33 @@ func _ready() -> void:
 	sprite.sprite_frames = Assets.item_frames("pizza")
 	sprite.play(&"default")
 	_glow = Fx.attach_glow(self, Color(1.0, 0.72, 0.33, 0.45), 0.95, Vector2(0, -9), 0.0)
+	if team >= 0:
+		visible = false  # not spawned yet
+		add_to_group(&"team_pizzas")
+		var tint := MatchState.team_color(team)
+		sprite.self_modulate = Color(1, 1, 1).lerp(tint, 0.35)
+
+
+func _drop_off() -> Node2D:
+	if team >= 0 and customer == null:
+		customer = MatchState.dropoff_of(team)
+	return customer
+
+
+func _is_owner(id: int) -> bool:
+	return team < 0 or MatchState.team_of(id) == team
+
+
+## Versus: only the owning team sees its pizza, unless an enemy is close.
+func _process(_delta: float) -> void:
+	if team < 0:
+		return
+	var show := _spawned and not delivered
+	if show and not _is_owner(Net.local_id()):
+		var me := Net.local_player() as Node2D
+		show = me != null and me.global_position.distance_to(global_position) \
+			<= MatchState.cfg.pizza_enemy_reveal_distance
+	visible = show
 
 
 func place(pos: Vector2) -> void:
@@ -28,12 +59,20 @@ func place(pos: Vector2) -> void:
 	_set_state(pos, 0, false)
 
 
-func can_interact(_player: Player) -> bool:
-	return _spawned and carrier_id == 0 and not delivered
+func can_interact(player: Player) -> bool:
+	return _spawned and carrier_id == 0 and not delivered and (team < 0 or visible)
 
 
-func get_interact_prompt(_player: Player) -> String:
-	return "[E] Pick up pizza"
+func get_interact_prompt(player: Player) -> String:
+	if _is_owner(player.get_multiplayer_authority()):
+		return "[E] Pick up %s" % ("your pizza" if team >= 0 else "pizza")
+	if _enemy_rule() == "steal":
+		return "[E] Steal %s's pizza" % MatchState.team_name(team)
+	return "[E] Toss %s's pizza (it respawns elsewhere)" % MatchState.team_name(team)
+
+
+func _enemy_rule() -> String:
+	return Net.settings.get("pizza_enemy", MatchState.cfg.pizza_enemy_action)
 
 
 func interact(player: Player) -> void:
@@ -57,12 +96,24 @@ func _try_interaction(player: Player, handoff: bool) -> void:
 	if not _spawned or delivered or player == null or player.is_dead() or not player.visible:
 		return
 	var id := player.get_multiplayer_authority()
-	var target := customer.global_position if handoff else global_position
+	var drop := _drop_off()
+	if handoff and drop == null:
+		return
+	var target := drop.global_position if handoff else global_position
 	if player.global_position.distance_squared_to(target) > REACH * REACH:
 		return
 	if handoff and carrier_id == id:
+		if not _is_owner(id):
+			return  # a stolen pizza can't be delivered
 		_set_state(target, 0, true)
+		if team >= 0:
+			MatchState.on_pizza_delivered(team)
 	elif not handoff and carrier_id == 0:
+		if not _is_owner(id) and _enemy_rule() == "reset":
+			Net.announce("%s tossed %s's pizza! It'll turn up somewhere else." % [
+				Net.peer_name(id), MatchState.team_name(team)])
+			MatchState.spawn_pizza(team)
+			return
 		_set_state(player.global_position, id, false)
 
 
@@ -115,4 +166,24 @@ func _apply_state(pos: Vector2, new_carrier: int, handed_off: bool) -> void:
 	sprite.scale = Vector2.ONE * (2.5 if on_ground else 1.5)
 	sprite.position.y = -9.0 if on_ground else -39.0
 	_glow.visible = on_ground
+	if team >= 0:
+		_update_waypoints()
+		MatchState._refresh_hud()
 	changed.emit()
+
+
+## Versus: the owning team gets an arrow to its pizza (or to the drop-off while carrying it).
+func _update_waypoints() -> void:
+	if not _is_owner(Net.local_id()):
+		return
+	var drop := _drop_off()
+	EventBus.waypoint_cleared.emit(self)
+	if drop:
+		EventBus.waypoint_cleared.emit(drop)
+	if delivered or not _spawned:
+		return
+	if carrier_id != 0 and _is_owner(carrier_id):
+		if drop:
+			EventBus.waypoint_set.emit(drop, "DROP-OFF")
+	else:
+		EventBus.waypoint_set.emit(self, "PIZZA")

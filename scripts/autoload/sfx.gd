@@ -14,9 +14,14 @@ const SOUNDS := {
 	&"explosion": ["explosion"], &"crash": ["crash"], &"ram": ["ram"], &"pickup": ["pickup"],
 	&"task_work": ["task_work"], &"task_done": ["task_done"], &"cough": ["cough"],
 	&"player_hurt": ["player_hurt"], &"alert": ["alert"], &"ui_click": ["ui_click"], &"engine": ["engine"],
+	&"knife_swing": ["knife_swing"], &"knife_hit": ["knife_hit"],
+	&"zombie_step": ["zombie_step_1", "zombie_step_2"], &"zombie_attack": ["zombie_attack_1", "zombie_attack_2"],
+	&"horn": ["horn"],
+	&"generator_hum": ["generator_hum"], &"acid_tick": ["acid_tick"],
+	&"zombie_skitter": ["zombie_skitter"], &"zombie_guard": ["zombie_guard"],
 }
 ## Per-sound loudness trims (dB).
-const TRIM := {&"groan": -6.0, &"task_work": -4.0, &"ui_click": -6.0, &"alert": -2.0, &"hit_flesh": -3.0}
+const TRIM := {&"zombie_step": -10.0, &"knife_swing": -6.0, &"groan": -6.0, &"task_work": -4.0, &"ui_click": -6.0, &"alert": -2.0, &"hit_flesh": -3.0}
 const POOL_2D := 24
 const POOL_UI := 6
 ## Same sound again within this many ms is skipped (shotgun pellets, crowds).
@@ -41,11 +46,12 @@ func _ready() -> void:
 			if ResourceLoader.exists(path):
 				list.append(load(path))
 		_streams[key] = list
-	var engine: AudioStreamWAV = _streams[&"engine"][0] if not _streams[&"engine"].is_empty() else null
-	if engine:
-		engine.loop_mode = AudioStreamWAV.LOOP_FORWARD
-		engine.loop_begin = 0
-		engine.loop_end = int(engine.get_length() * engine.mix_rate)
+	for loop in [&"engine", &"generator_hum"]:
+		if not _streams[loop].is_empty():
+			var stream: AudioStreamWAV = _streams[loop][0]
+			stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+			stream.loop_begin = 0
+			stream.loop_end = int(stream.get_length() * stream.mix_rate)
 	for i in POOL_2D:
 		var p := AudioStreamPlayer2D.new()
 		p.bus = _bus

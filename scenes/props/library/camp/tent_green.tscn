@@ -1,0 +1,12 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/rooms/prop.gd" id="1_hlkco"]
+[ext_resource type="Texture2D" path="res://assets/tilesets/camp.png" id="2_qygc7"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_8fd7y"]
+atlas = ExtResource("2_qygc7")
+region = Rect2(30, 336, 35, 64)
+
+[node name="TentGreen" type="StaticBody2D" unique_id=497733782]
+script = ExtResource("1_hlkco")
+texture = SubResource("AtlasTexture_8fd7y")

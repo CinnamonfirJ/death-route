@@ -125,6 +125,7 @@ func on_car_impact(car: Car, pre_velocity: Vector2, slip: float) -> void:
 		take_damage(impact * 0.08, pre_velocity.normalized() * 40.0)
 		EventBus.screen_shake_requested.emit(clampf(impact / 40.0, 3.0, 9.0), 0.3)
 	EventBus.noise_increased.emit(4.0, global_position)
+	EventBus.sound_made.emit(global_position, 200.0)
 
 
 ## Knocked aside by a drifting car. Online the host applies it; the driver's copy

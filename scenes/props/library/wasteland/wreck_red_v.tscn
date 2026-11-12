@@ -1,0 +1,12 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/rooms/prop.gd" id="1_k1luo"]
+[ext_resource type="Texture2D" path="res://assets/tilesets/wasteland_32.png" id="2_1xawp"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_bshl8"]
+atlas = ExtResource("2_1xawp")
+region = Rect2(0, 160, 32, 64)
+
+[node name="WreckRedV" type="StaticBody2D" unique_id=1320104420]
+script = ExtResource("1_k1luo")
+texture = SubResource("AtlasTexture_bshl8")

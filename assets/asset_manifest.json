@@ -183,6 +183,8 @@
                                            "shoot": { "res": "res://assets/weapons/sniper_shoot.png",     "src": "zombie_pack/AnimationSheets/Weaonns_Sprites_32x32/Sniper_Shoot.png",           "frames": 13 } },
     "rocket_launcher": { "type": "ranged", "idle": { "res": "res://assets/weapons/rocket_flicker.png",    "src": "zombie_pack/AnimationSheets/Weaonns_Sprites_32x32/RocketLauncher_Flicker.png", "frames": 7 },
                                            "shoot": { "res": "res://assets/weapons/rocket_shoot.png",     "src": "zombie_pack/AnimationSheets/Weaonns_Sprites_32x32/RocketLauncher_Shoot.png",   "frames": 12 } },
+    "flare_pistol": {"type": "ranged", "shoot": {"res": "res://assets/weapons/flare_pistol_shoot.png", "frames": 3}},
+    "needle_smg": {"type": "ranged", "shoot": {"res": "res://assets/weapons/needle_smg_shoot.png", "frames": 3}},
     "_static_sheet":   { "res": "res://assets/weapons/weapons_static_sheet.png", "src": "zombie_pack/SpriteSheets/Weapons sprites (32x32).png", "grid": [6, 2], "cell": [32, 32] }
   },
 
@@ -222,6 +224,8 @@
     "cargo_corn":       { "use": "Delivery cargo",                          "res": "res://assets/items/corn.png",             "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -Corn.png" },
     "cargo_potatoes":   { "use": "Delivery cargo",                          "res": "res://assets/items/potatoes.png",         "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -potatoes.png" },
     "cargo_wheat":      { "use": "Delivery cargo",                          "res": "res://assets/items/wheat.png",            "src": "zombie_pack/AnimationSheets/Items_Sprites_16x16/item animations -wheat.png" },
+    "flare_pistol": {"type": "ranged", "shoot": {"res": "res://assets/weapons/flare_pistol_shoot.png", "frames": 3}},
+    "needle_smg": {"type": "ranged", "shoot": {"res": "res://assets/weapons/needle_smg_shoot.png", "frames": 3}},
     "_static_sheet":    { "res": "res://assets/items/items_bullets_static_sheet.png", "src": "zombie_pack/SpriteSheets/items & bullets sprites(16x16).png", "grid": [5, 7], "cell": [16, 16], "use": "Bullet projectiles + static item icons" }
   },
 

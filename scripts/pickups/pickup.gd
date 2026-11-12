@@ -6,7 +6,9 @@ extends Area2D
 ## Online the host owns pickups: it detects who touched one and Net.grant()s the
 ## reward on that player's own machine.
 
-enum Kind { SCRAP, AMMO, FUEL, MEDKIT }
+enum Kind { SCRAP, AMMO, FUEL, MEDKIT, FLARE_PISTOL, NEEDLE_SMG }
+
+const FIELD_IDS := {Kind.FLARE_PISTOL: &"flare_pistol", Kind.NEEDLE_SMG: &"needle_smg"}
 
 const ITEM_FOR_KIND := {
 	Kind.SCRAP: "scrap", Kind.AMMO: "ammo_pistol", Kind.FUEL: "fuel_can", Kind.MEDKIT: "medkit",
@@ -20,6 +22,8 @@ const MAGNET_SPEED := 160.0
 @export var amount := 1
 ## Seconds before it despawns. 0 = never (hand-placed loot).
 @export var lifetime := 0.0
+@export var anchored := false
+@export var swap_reach := 32.0
 
 var _age := 0.0
 var _taken := false
@@ -54,10 +58,24 @@ static func apply_to(player: Node, k: int, amt: int) -> bool:
 				return false
 			player.heal(amt)
 			float_text(player, "+%d HP" % amt, Color(1.0, 0.45, 0.45))
+		Kind.FLARE_PISTOL, Kind.NEEDLE_SMG:
+			player.weapon.equip_found(FIELD_IDS[k])
+			float_text(player, player.weapon.stats.display_name, Color("#b9eebb"))
 	return true
 
 
 func _ready() -> void:
+	if FIELD_IDS.has(kind):
+		collision_layer = 16
+		monitorable = true
+		monitoring = false
+		var config: WeaponStats = load(Weapon.FIELD_WEAPONS[FIELD_IDS[kind]])
+		var frames := SpriteFrames.new()
+		frames.add_frame(&"default", config.pickup_icon)
+		sprite.sprite_frames = frames
+		sprite.play(&"default")
+		Fx.attach_glow(self, Color(config.tracer_color, 0.35), 0.46, Vector2(0, -6))
+		return
 	sprite.sprite_frames = Assets.item_frames(ITEM_FOR_KIND[kind])
 	sprite.play(&"default")
 	body_entered.connect(_on_body_entered)
@@ -77,10 +95,43 @@ func _physics_process(delta: float) -> void:
 			return
 		if _age > lifetime - 5.0:
 			sprite.visible = int(_age * 8.0) % 2 == 0
+	if anchored or FIELD_IDS.has(kind):
+		return
 	for player in Net.player_nodes():
 		if player.visible and global_position.distance_to(player.global_position) < MAGNET_RADIUS:
 			global_position = global_position.move_toward(player.global_position, MAGNET_SPEED * delta)
 			break
+
+
+func can_interact(player: Node) -> bool:
+	return FIELD_IDS.has(kind) and not _taken and player.visible and player.is_on_foot() \
+		and global_position.distance_to(player.global_position) <= swap_reach
+
+
+func get_interact_prompt(_player: Node) -> String:
+	var config: WeaponStats = load(Weapon.FIELD_WEAPONS[FIELD_IDS[kind]])
+	return "[E] Swap for %s · %s" % [config.display_name, config.ammo_name]
+
+
+func interact(player: Node) -> void:
+	if Net.is_sim_authority():
+		_claim_weapon(player)
+	else:
+		_rpc_claim_weapon.rpc_id(1)
+
+
+@rpc("any_peer", "reliable")
+func _rpc_claim_weapon() -> void:
+	if Net.is_host():
+		_claim_weapon(_player_by_id(multiplayer.get_remote_sender_id()))
+
+
+func _claim_weapon(player: Node) -> void:
+	if player == null or not can_interact(player):
+		return
+	_taken = true
+	Net.grant(player.get_multiplayer_authority(), kind, amount)
+	queue_free()
 
 
 func _on_body_entered(body: Node) -> void:

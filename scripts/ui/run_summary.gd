@@ -28,6 +28,9 @@ func _ready() -> void:
 
 
 func show_summary(summary: Dictionary) -> void:
+	if summary.get("versus", false):
+		_show_versus(summary)
+		return
 	var success: bool = summary.get("success", false)
 	var pizza_delivered: bool = summary.get("pizza_delivered", success)
 	title.text = "ROUTE COMPLETE" if success else "RUN FAILED"
@@ -52,6 +55,19 @@ func show_summary(summary: Dictionary) -> void:
 	if summary.has("rival"):
 		lines.append(summary.rival)
 	details.text = "\n".join(lines)
+	visible = true
+	get_tree().paused = true
+	back_button.grab_focus()
+
+
+func _show_versus(summary: Dictionary) -> void:
+	var result: String = summary.get("result", "draw")
+	title.text = {"win": "VICTORY", "lose": "DEFEAT", "draw": "DRAW"}[result]
+	title.add_theme_color_override(&"font_color", {"win": Color(0.55, 0.9, 0.45), "lose": Color(0.95, 0.3, 0.25),
+		"draw": Color(1, 0.85, 0.4)}[result])
+	var who: String = summary.get("winner_name", "")
+	flavor.text = String(summary.get("reason", "")) + ("" if who == "" else "  %s wins." % who)
+	details.text = "%s\n\nScrap banked: %d" % [summary.get("board", ""), summary.get("scrap_banked", 0)]
 	visible = true
 	get_tree().paused = true
 	back_button.grab_focus()

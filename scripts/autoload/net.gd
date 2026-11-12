@@ -22,8 +22,12 @@ const MAX_PLAYERS := 4
 ## Seconds between batched noise reports from clients to the host.
 const NOISE_FLUSH := 0.1
 
-var players := {}  # peer id -> {"name": String, "character": StringName}
-var settings := {"location": "hospital", "rival": false}
+var players := {}  # peer id -> {"name", "character", "team": int, "ready": bool}
+## mode: "coop" (the classic run), "tdm" (Team Deathmatch) or "ffa" (Free For All).
+## pizza_enemy: what an enemy can do with your pizza in versus ("steal" or "reset").
+var settings := {"location": "hospital", "rival": false, "mode": "coop", "pizza_enemy": "steal"}
+const MODES := ["coop", "tdm", "ffa"]
+const MODE_NAMES := {"coop": "Co-op Run", "tdm": "Team Deathmatch", "ffa": "Free For All"}
 var role := "crew"  # "crew" or "rival" (only the rival's own machine knows)
 var my_name := "Handyman"
 var in_match := false
@@ -36,6 +40,7 @@ var _rival_exposed := false
 var _noise_sum := 0.0
 var _noise_pos := Vector2.ZERO
 var _noise_cd := 0.0
+var _sounds: Array = []
 
 
 func _ready() -> void:
@@ -45,15 +50,25 @@ func _ready() -> void:
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
 	EventBus.noise_increased.connect(_on_local_noise)
+	EventBus.sound_made.connect(_on_local_sound)
 
 
 func _process(delta: float) -> void:
+	if _noise_sum <= 0.0 and _sounds.is_empty():
+		return
+	if not is_online() or multiplayer.is_server():
+		_noise_sum = 0.0
+		_sounds.clear()
+		return
 	if _noise_sum > 0.0:
 		_noise_cd -= delta
 		if _noise_cd <= 0.0:
 			_noise_cd = NOISE_FLUSH
 			_rpc_noise.rpc_id(1, _noise_sum, _noise_pos)
 			_noise_sum = 0.0
+	if not _sounds.is_empty():
+		_rpc_sounds.rpc_id(1, _sounds)
+		_sounds = []
 
 
 # ---------- State ----------
@@ -84,6 +99,26 @@ func is_local_authority(node: Node) -> bool:
 
 func peer_name(id: int) -> String:
 	return players.get(id, {}).get("name", "Handyman %d" % id)
+
+
+## Versus (TDM / FFA) is on for this lobby / match.
+func is_versus() -> bool:
+	return is_online() and settings.get("mode", "coop") in ["tdm", "ffa"]
+
+
+## Team id: TDM 0 (red) / 1 (blue); FFA every player is their own team (= peer id).
+func peer_team(id: int) -> int:
+	if settings.get("mode", "coop") == "ffa":
+		return id
+	return int(players.get(id, {}).get("team", 0))
+
+
+func peer_ready(id: int) -> bool:
+	return id == 1 or bool(players.get(id, {}).get("ready", false))
+
+
+func all_ready() -> bool:
+	return players.keys().all(func(id: int) -> bool: return peer_ready(id))
 
 
 func peer_character(id: int) -> StringName:
@@ -202,7 +237,7 @@ func host(port := DEFAULT_PORT) -> Error:
 		status_changed.emit("Couldn't host on port %d (%s)" % [port, error_string(err)])
 		return err
 	multiplayer.multiplayer_peer = peer
-	players = {1: {"name": my_name, "character": GameManager.selected_character}}
+	players = {1: {"name": my_name, "character": GameManager.selected_character, "team": 0, "ready": true}}
 	status_changed.emit("Hosting on port %d. Share your IP with friends." % port)
 	roster_changed.emit()
 	return OK
@@ -210,6 +245,11 @@ func host(port := DEFAULT_PORT) -> Error:
 
 func join(address: String, port := DEFAULT_PORT) -> Error:
 	leave()
+	var codes: Dictionary = ProjectSettings.get_setting("dead_route/network/room_codes", {})
+	address = str(codes.get(address.strip_edges().to_upper(), address.strip_edges()))
+	if address.is_empty():
+		status_changed.emit("Enter a room code or host address.")
+		return ERR_INVALID_PARAMETER
 	var peer := WebSocketMultiplayerPeer.new()
 	# A full ws:// or wss:// link (e.g. a Cloudflare/ngrok tunnel) is used as-is.
 	# https:// links from tunnel tools are accepted too and mapped to wss://.
@@ -255,6 +295,8 @@ func _on_peer_connected(_id: int) -> void:
 
 
 func _on_peer_disconnected(id: int) -> void:
+	if is_host() and in_match:
+		MatchState.on_peer_left(id)
 	players.erase(id)
 	_ready_peers.erase(id)
 	_downed.erase(id)
@@ -295,7 +337,67 @@ func _rpc_register(player_name: String, character: StringName) -> void:
 		multiplayer.multiplayer_peer.disconnect_peer(id)
 		return
 	players[id] = {"name": player_name.strip_edges().left(16),
-		"character": character if GameManager.PLAYABLE_CHARACTERS.has(character) else GameManager.DEFAULT_CHARACTER}
+		"character": character if GameManager.PLAYABLE_CHARACTERS.has(character) else GameManager.DEFAULT_CHARACTER,
+		"team": _smaller_team(), "ready": false}
+	_rpc_roster.rpc(players, settings)
+	roster_changed.emit()
+
+
+# ---------- Teams + ready (lobby) ----------
+
+func _smaller_team() -> int:
+	var counts := [0, 0]
+	for id in players:
+		counts[clampi(int(players[id].get("team", 0)), 0, 1)] += 1
+	return 0 if counts[0] <= counts[1] else 1
+
+
+## Pick a TDM team (0 red / 1 blue).
+func set_team(team: int) -> void:
+	if not is_online() or in_match:
+		return
+	if is_host():
+		_set_peer_field(1, "team", clampi(team, 0, 1))
+	else:
+		_rpc_set_team.rpc_id(1, team)
+
+
+@rpc("any_peer", "reliable")
+func _rpc_set_team(team: int) -> void:
+	if is_host():
+		_set_peer_field(multiplayer.get_remote_sender_id(), "team", clampi(team, 0, 1))
+
+
+func set_ready(on: bool) -> void:
+	if not is_online() or in_match:
+		return
+	if is_host():
+		return  # the host is always ready: they press START
+	_rpc_set_ready.rpc_id(1, on)
+
+
+@rpc("any_peer", "reliable")
+func _rpc_set_ready(on: bool) -> void:
+	if is_host():
+		_set_peer_field(multiplayer.get_remote_sender_id(), "ready", on)
+
+
+## Host: split everyone evenly across the two teams.
+func auto_balance() -> void:
+	if not is_host() or in_match:
+		return
+	var ids := players.keys()
+	ids.shuffle()
+	for i in ids.size():
+		players[ids[i]].team = i % 2
+	_rpc_roster.rpc(players, settings)
+	roster_changed.emit()
+
+
+func _set_peer_field(id: int, key: String, value: Variant) -> void:
+	if in_match or not players.has(id):
+		return
+	players[id][key] = value
 	_rpc_roster.rpc(players, settings)
 	roster_changed.emit()
 
@@ -336,11 +438,14 @@ func _rpc_roster(new_players: Dictionary, new_settings: Dictionary) -> void:
 func start_match() -> void:
 	if not is_host():
 		return
+	if is_versus() and not all_ready():
+		status_changed.emit("Waiting for everyone to press READY.")
+		return
 	_ready_peers.clear()
 	_downed.clear()
 	_rival_exposed = false
 	_rival_id = 0
-	if settings.rival and players.size() >= 2:
+	if settings.rival and players.size() >= 2 and not is_versus():
 		_rival_id = players.keys().pick_random()
 	for id in players:
 		var r := "rival" if id == _rival_id else "crew"
@@ -403,6 +508,23 @@ func _rpc_noise(amount: float, pos: Vector2) -> void:
 	if not multiplayer.is_server():
 		return
 	EventBus.noise_increased.emit(amount, pos)
+
+
+## Sound events (zombie hearing): clients batch theirs to the host.
+func _on_local_sound(pos: Vector2, radius: float) -> void:
+	if not is_online() or multiplayer.is_server() or radius <= 0.0:
+		return
+	if _sounds.size() < 32:
+		_sounds.append(Vector3(pos.x, pos.y, radius))
+
+
+@rpc("any_peer", "unreliable_ordered")
+func _rpc_sounds(list: Array) -> void:
+	if not multiplayer.is_server():
+		return
+	for v in list:
+		if v is Vector3:
+			EventBus.sound_made.emit(Vector2(v.x, v.y), minf(v.z, 1000.0))
 
 
 ## Host -> clients: meter level for the HUD.
@@ -483,7 +605,7 @@ func _set_down(id: int, is_down: bool) -> void:
 
 
 func _check_all_down() -> void:
-	if not is_host() or not in_match or players.is_empty():
+	if not is_host() or not in_match or players.is_empty() or is_versus():
 		return
 	if players.keys().all(func(p: int) -> bool: return _downed.has(p)):
 		get_tree().create_timer(2.0).timeout.connect(func() -> void: end_run(false))
@@ -506,6 +628,16 @@ func _rival_exposed_on_host(id: int, reason: String) -> void:
 		return
 	_rival_exposed = true
 	announce("%s %s! They're the RIVAL!" % [peer_name(id), reason])
+
+
+## Host only: ends a versus match for everyone. Each machine works out win/lose itself.
+func end_versus(info: Dictionary) -> void:
+	if not is_host() or not in_match:
+		return
+	in_match = false
+	info["versus"] = true
+	_rpc_end_run.rpc(false, info)
+	_finish_local(false, info)
 
 
 ## Host only: ends the run for everyone.

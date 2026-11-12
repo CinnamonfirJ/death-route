@@ -6,12 +6,15 @@ extends Node
 ##   - the NOISE METER: shooting, sprinting, engines, jobs push a 0..100 meter. Its tier
 ##     makes the next wave come sooner and somewhat bigger, never beyond what the clock allows.
 ## Waves trickle in one zombie at a time from off-screen spawn points (group "zombie_spawn").
-## Every noise also alerts zombies within earshot so they come investigate.
+## Separately, sound events (EventBus.sound_made, radius per sound in MatchConfig) tell
+## zombies within earshot to go and investigate where the sound came from.
 
 const WALKER := preload("res://scenes/zombies/walker.tscn")
 const LATCHER := preload("res://scenes/zombies/latcher.tscn")
 const STOPPER := preload("res://scenes/zombies/stopper.tscn")
 const BRUTE := preload("res://scenes/zombies/brute.tscn")
+const SKITTER := preload("res://scenes/zombies/skitter.tscn")
+const GUARD := preload("res://scenes/zombies/guard.tscn")
 
 ## Noise tier -> wave size multiplier and how much faster the next wave comes.
 const TIER_SIZE := {1: 1.0, 2: 1.2, 3: 1.45, 4: 1.75}
@@ -20,6 +23,8 @@ const UNLOCK_LINES := {
 	"latcher": "Latchers are out. Keep them off your roof.",
 	"stopper": "Stoppers on the roads. Drift past them.",
 	"brute": "Something BIG is moving. Find a barrel.",
+	"skitter": "Skitter nearby. Watch for the rush.",
+	"guard": "Guards are out. Keep your distance.",
 }
 
 @export var max_noise := 100.0
@@ -37,6 +42,10 @@ const UNLOCK_LINES := {
 @export var latcher_unlock := 90.0
 @export var stopper_unlock := 180.0
 @export var brute_unlock := 270.0
+@export var skitter_unlock := 55.0
+@export var guard_unlock := 135.0
+@export var skitter_weight := 1.75
+@export var guard_weight := 1.30
 @export var wave_size_start := 2.0
 @export var wave_size_end := 8.0
 ## Seconds between waves at tier 1 (start -> end of the ramp); higher tiers come faster.
@@ -80,6 +89,7 @@ var _announced := {}
 func _ready() -> void:
 	add_to_group(&"noise_director")
 	EventBus.noise_increased.connect(_on_noise)
+	EventBus.sound_made.connect(_on_sound)
 	_wave_timer = opening_grace
 
 
@@ -100,6 +110,10 @@ func unlocked_types() -> Array[String]:
 		out.append("stopper")
 	if elapsed >= brute_unlock:
 		out.append("brute")
+	if elapsed >= skitter_unlock:
+		out.append("skitter")
+	if elapsed >= guard_unlock:
+		out.append("guard")
 	return out
 
 
@@ -107,9 +121,15 @@ func _on_noise(amount: float, pos: Vector2) -> void:
 	level = minf(level + amount, max_noise)
 	_quiet = decay_delay
 	_last_noise_pos = pos
-	var radius := minf(hearing_base + amount * hearing_per_unit, hearing_max)
+
+
+## Zombie hearing: a sound event (gunshot, engine, horn, sprint, fight...). Every zombie
+## inside `radius` (x its hearing_mult) walks to the sound's source. Host only.
+func _on_sound(pos: Vector2, radius: float) -> void:
+	if not Net.is_sim_authority() or radius <= 0.0:
+		return
 	for z in get_tree().get_nodes_in_group(&"zombies"):
-		if pos.distance_to(z.global_position) < radius * z.hearing_mult:
+		if pos.distance_to(z.global_position) < minf(radius, hearing_max) * z.hearing_mult:
 			z.hear(pos)
 
 
@@ -172,7 +192,8 @@ func _spawn_wave() -> void:
 		var kind := _roll_kind(stoppers)
 		if kind == "stopper":
 			stoppers += 1
-		_queue.append({"walker": WALKER, "latcher": LATCHER, "stopper": STOPPER, "brute": BRUTE}[kind])
+		_queue.append({"walker": WALKER, "latcher": LATCHER, "stopper": STOPPER,
+			"brute": BRUTE, "skitter": SKITTER, "guard": GUARD}[kind])
 	_trickle_cd = 0.0
 
 
@@ -182,6 +203,10 @@ func _roll_kind(stoppers_this_wave: int) -> String:
 	var t := threat()
 	var weights := {"walker": 10.0}
 	var types := unlocked_types()
+	if "skitter" in types:
+		weights["skitter"] = skitter_weight
+	if "guard" in types:
+		weights["guard"] = guard_weight
 	if "latcher" in types:
 		weights["latcher"] = lerpf(2.0, 4.0, t)
 	if "stopper" in types and stoppers_this_wave == 0:

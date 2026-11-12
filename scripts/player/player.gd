@@ -34,6 +34,8 @@ var touch_aim := Vector2.RIGHT
 var touch_fire := false
 
 var _flash_tween: Tween
+## Crouching: slower, silent footsteps (zombies can't hear you).
+var crouching := false
 
 @onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
 @onready var collision: CollisionShape2D = $CollisionShape2D
@@ -41,6 +43,7 @@ var _flash_tween: Tween
 @onready var state_machine: StateMachine = $StateMachine
 @onready var weapon: Weapon = $Weapon
 @onready var interact_zone: Area2D = $InteractZone
+@onready var _crew_health: Range = $CrewHealth
 
 
 func _enter_tree() -> void:
@@ -53,6 +56,14 @@ func _ready() -> void:
 	max_hp = GameManager.apply_stat(&"player.max_hp", max_hp)
 	sprint_noise_per_sec = GameManager.apply_stat(&"player.noise", sprint_noise_per_sec)
 	hp = max_hp
+	_crew_health.visible = false
+	var tag: Node2D = load("res://scripts/player/player_health_bar.gd").new()
+	tag.name = "HealthTag"
+	tag.player = self
+	tag.bar = _crew_health
+	add_child(tag)
+	if MatchState.active:
+		_invuln = MatchState.cfg.spawn_protection
 	if character_id == &"":
 		character_id = Net.peer_character(1) if Net.is_online() else GameManager.selected_character
 	sprite.sprite_frames = Assets.character_frames(character_id)
@@ -61,9 +72,15 @@ func _ready() -> void:
 	add_to_group(&"player")
 	interact_zone.monitorable = Net.is_online()  # teammates can give ammo / revive
 	Net.attach_sync(self,
-		[".:position", "AnimatedSprite2D:animation", "AnimatedSprite2D:flip_h", "Weapon:rotation"],
-		[".:visible", ".:hp", "Weapon:visible", "AnimatedSprite2D:speed_scale"])
+		[".:position", "AnimatedSprite2D:animation", "AnimatedSprite2D:flip_h", "Weapon:rotation", "Flashlight:rotation"],
+		[".:visible", ".:hp", ".:max_hp", "Weapon:visible", "Weapon:knife_equipped", "Weapon:display_id",
+			"AnimatedSprite2D:speed_scale", "AnimatedSprite2D:scale", "Flashlight:active"])
 	if Net.is_local_authority(self):
+		# Hear the world from your own handyman (voice chat, zombie sounds pan around you).
+		var ears := AudioListener2D.new()
+		ears.name = "Ears"
+		add_child(ears)
+		ears.make_current()
 		EventBus.player_damaged.emit.call_deferred(0.0, hp)  # sync HUD bar to upgraded max
 		if Net.is_online():
 			Net.local_player_spawned.emit.call_deferred(self)
@@ -81,7 +98,7 @@ func display_name() -> String:
 const AUTO_AIM_RANGE := 280.0
 const AUTO_AIM_CONE_DEG := 28.0
 
-## The zombie auto-aim is locked onto (null if none / auto-aim off). Read by the HUD reticle.
+## The current auto-aim target. The local reticle changes color when aim is assisted.
 var aim_target: Node2D = null
 
 
@@ -146,9 +163,9 @@ func start_task(task: Node) -> void:
 	state_machine.transition_to(&"Tasking", {"task": task})
 
 
-func take_damage(amount: float, knockback := Vector2.ZERO) -> void:
+func take_damage(amount: float, knockback := Vector2.ZERO, acid := false) -> void:
 	if not Net.is_local_authority(self):
-		_rpc_take_damage.rpc_id(get_multiplayer_authority(), amount, knockback)
+		_rpc_take_damage.rpc_id(get_multiplayer_authority(), amount, knockback, acid)
 		return
 	if is_dead() or _invuln > 0.0:
 		return
@@ -156,11 +173,15 @@ func take_damage(amount: float, knockback := Vector2.ZERO) -> void:
 		return
 	hp = maxf(hp - amount, 0.0)
 	velocity += knockback
-	Fx.blood(global_position + Vector2(0, -12), knockback, 6)
-	Sfx.play(&"player_hurt", global_position)
+	if acid:
+		Sfx.play(&"acid_tick", global_position)
+		Pickup.float_text(self, "-%d ACID" % roundi(amount), Color("#c2f186"))
+	else:
+		Fx.blood(global_position + Vector2(0, -12), knockback, 6)
+		Sfx.play(&"player_hurt", global_position)
 	EventBus.player_damaged.emit(amount, hp)
 	EventBus.screen_shake_requested.emit(3.0, 0.12)
-	_flash()
+	_flash(Color("#9de65b") if acid else Color(1.0, 0.35, 0.35))
 	if is_dead():
 		state_machine.transition_to(&"Dead")
 
@@ -191,11 +212,16 @@ func _physics_process(delta: float) -> void:
 # ---------- Online: forwarded damage, revive, ammo gifts, flashlight ----------
 
 @rpc("any_peer", "reliable")
-func _rpc_take_damage(amount: float, knockback: Vector2) -> void:
-	take_damage(amount, knockback)
+func _rpc_take_damage(amount: float, knockback: Vector2, acid := false) -> void:
+	if MatchState.active and multiplayer.get_remote_sender_id() != 1:
+		return  # versus: only the host's simulation may hurt you
+	take_damage(amount, knockback, acid and multiplayer.get_remote_sender_id() == 1)
 
 
 func can_interact(other: Node) -> bool:
+	if MatchState.active:
+		# Versus: no revives (you respawn); ammo only for teammates.
+		return other != self and visible and not is_dead() 			and not MatchState.are_enemies(other.get_multiplayer_authority(), get_multiplayer_authority())
 	return Net.is_online() and other != self and visible
 
 
@@ -225,6 +251,55 @@ func interact(other: Node) -> void:
 func _rpc_receive_ammo(amount: int, from_name: String) -> void:
 	weapon.add_ammo(amount)
 	EventBus.hud_message.emit("%s gave you %d ammo." % [from_name, amount])
+
+
+# ---------- Versus: knife hits (host-validated) + respawns ----------
+
+## Host: a validated knife hit on this player. Damage is applied by the owner's machine.
+func receive_pvp_hit(amount: float, knockback: Vector2, attacker: int) -> void:
+	if Net.is_local_authority(self):
+		_apply_pvp_hit(amount, knockback, attacker)
+	else:
+		_rpc_pvp_hit.rpc_id(get_multiplayer_authority(), amount, knockback, attacker)
+
+
+@rpc("any_peer", "reliable")
+func _rpc_pvp_hit(amount: float, knockback: Vector2, attacker: int) -> void:
+	# Only the host (the referee) may deal PvP damage.
+	if multiplayer.get_remote_sender_id() == 1:
+		_apply_pvp_hit(amount, knockback, attacker)
+
+
+func _apply_pvp_hit(amount: float, knockback: Vector2, attacker: int) -> void:
+	if is_dead():
+		return
+	take_damage(amount, knockback)
+	if attacker != 0 and not is_dead():
+		EventBus.hud_message.emit("%s is knifing you!" % Net.peer_name(attacker))
+
+
+## Owner: come back to life at `pos` with brief spawn protection.
+func respawn_at(pos: Vector2, protection: float) -> void:
+	if current_car:
+		exit_car()
+	global_position = pos
+	velocity = Vector2.ZERO
+	hp = max_hp
+	_invuln = protection
+	state_machine.transition_to(&"OnFoot")
+	EventBus.player_damaged.emit(0.0, hp)
+	EventBus.hud_message.emit("Back in the fight.")
+	EventBus.screen_shake_requested.emit(2.0, 0.15)
+
+
+@rpc("any_peer", "reliable")
+func _rpc_respawn(pos: Vector2, protection: float) -> void:
+	if multiplayer.get_remote_sender_id() == 1:
+		respawn_at(pos, protection)
+
+
+func is_protected() -> bool:
+	return _invuln > 0.0
 
 
 # HoldTask-style hooks so TaskingState can drive a revive.
@@ -294,7 +369,7 @@ func get_best_interactable() -> Node:
 	var best: Node = null
 	var best_d := INF
 	for area in interact_area.get_overlapping_areas():
-		var target := area.get_parent()
+		var target: Node = area if area.has_method(&"interact") else area.get_parent()
 		if target == self or not target.has_method(&"interact"):
 			continue
 		if target.has_method(&"can_interact") and not target.can_interact(self):
@@ -306,9 +381,9 @@ func get_best_interactable() -> Node:
 	return best
 
 
-func _flash() -> void:
+func _flash(tint := Color(1.0, 0.35, 0.35)) -> void:
 	if _flash_tween:
 		_flash_tween.kill()
-	sprite.modulate = Color(1.0, 0.35, 0.35)
+	sprite.modulate = tint
 	_flash_tween = create_tween()
 	_flash_tween.tween_property(sprite, "modulate", Color.WHITE, 0.2)

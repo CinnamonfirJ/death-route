@@ -1,0 +1,12 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/rooms/prop.gd" id="1_dao61"]
+[ext_resource type="Texture2D" path="res://assets/tilesets/wasteland_32.png" id="2_owedh"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_wa7o8"]
+atlas = ExtResource("2_owedh")
+region = Rect2(128, 192, 32, 32)
+
+[node name="CrateWood" type="StaticBody2D" unique_id=546357454]
+script = ExtResource("1_dao61")
+texture = SubResource("AtlasTexture_wa7o8")

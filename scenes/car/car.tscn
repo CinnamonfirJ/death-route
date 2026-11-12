@@ -1,6 +1,7 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/car/car.gd" id="1_car"]
+[ext_resource type="Texture2D" path="res://assets/vehicles/car3.png" id="2_tex"]
 
 [sub_resource type="RectangleShape2D" id="body_shape"]
 size = Vector2(26, 48)
@@ -18,6 +19,7 @@ motion_mode = 1
 script = ExtResource("1_car")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("2_tex")
 scale = Vector2(2, 2)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]

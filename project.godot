@@ -12,18 +12,31 @@ config_version=5
 
 config/name="Dead Route"
 config/description="Top-down zombie survival delivery roguelite."
-run/main_scene="res://scenes/ui/garage.tscn"
+run/main_scene="res://scenes/ui/main_menu.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
+
+[audio]
+
+driver/enable_input=true
 
 [autoload]
 
 EventBus="*res://scripts/autoload/event_bus.gd"
 Assets="*res://scripts/autoload/assets.gd"
 GameManager="*res://scripts/autoload/game_manager.gd"
+WalletSession="*res://scripts/autoload/wallet_session.gd"
 Net="*res://scripts/autoload/net.gd"
+MatchState="*res://scripts/autoload/match_state.gd"
+Voice="*res://scripts/audio/voice_chat.gd"
 Fx="*res://scripts/autoload/fx.gd"
 Sfx="*res://scripts/autoload/sfx.gd"
+
+[dead_route]
+
+wallet/bridge_url=""
+wallet/bridge_url.web="https://deadroute.run"
+network/room_codes={}
 
 [display]
 
@@ -32,6 +45,8 @@ window/size/viewport_height=360
 window/size/window_width_override=1280
 window/size/window_height_override=720
 window/stretch/mode="canvas_items"
+window/stretch/mode.web="viewport"
+window/dpi/allow_hidpi.web=false
 window/stretch/aspect="expand"
 window/handheld/orientation=4
 
@@ -89,6 +104,24 @@ shove={
 "deadzone": 0.2,
 "events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":81,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
 ]
+}
+switch_weapon={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":16,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":86,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
+}
+crouch={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":67,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+, Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194326,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)]
+}
+horn={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":72,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)]
+}
+voice_talk={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":84,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)]
 }
 reload={
 "deadzone": 0.2,

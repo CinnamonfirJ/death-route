@@ -81,6 +81,7 @@ func _shoot_at(player) -> void:
 	t.tween_property(line, "modulate:a", 0.0, 0.1)
 	t.tween_callback(line.queue_free)
 	EventBus.noise_increased.emit(shoot_noise, global_position)
+	EventBus.sound_made.emit(global_position, MatchConfig.get_config().sound_gunshot)
 
 
 func _escape() -> void:

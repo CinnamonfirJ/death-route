@@ -19,7 +19,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.1, 0.09, 0.085, 1)
+color = Color(0.055, 0.062, 0.079, 1)
 
 [node name="Margin" type="MarginContainer" parent="."]
 layout_mode = 1
@@ -28,42 +28,27 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 10
+theme_override_constants/margin_left = 14
 theme_override_constants/margin_top = 8
-theme_override_constants/margin_right = 10
+theme_override_constants/margin_right = 14
 theme_override_constants/margin_bottom = 6
 
 [node name="VBox" type="VBoxContainer" parent="Margin"]
 layout_mode = 2
-theme_override_constants/separation = 3
+theme_override_constants/separation = 7
 
 [node name="Header" type="HBoxContainer" parent="Margin/VBox"]
 layout_mode = 2
+theme_override_constants/separation = 8
 
 [node name="Title" type="Label" parent="Margin/VBox/Header"]
 layout_mode = 2
+size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 0.85, 0.4, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 18
 text = "THE GARAGE"
-
-[node name="CharacterRow" type="HBoxContainer" parent="Margin/VBox/Header"]
-layout_mode = 2
-size_flags_horizontal = 3
-alignment = 1
-
-[node name="CharacterLabel" type="Label" parent="Margin/VBox/Header/CharacterRow"]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.85, 0.4, 1)
-theme_override_font_sizes/font_size = 9
-text = "CHARACTER"
-
-[node name="CharacterPicker" type="OptionButton" parent="Margin/VBox/Header/CharacterRow"]
-custom_minimum_size = Vector2(132, 24)
-layout_mode = 2
-theme_override_constants/icon_max_width = 18
-script = ExtResource("2_character")
 
 [node name="ScrapIcon" type="TextureRect" parent="Margin/VBox/Header"]
 unique_name_in_owner = true
@@ -99,12 +84,30 @@ unique_name_in_owner = true
 layout_mode = 2
 
 [node name="SidePanel" type="PanelContainer" parent="Margin/VBox/Body"]
-custom_minimum_size = Vector2(176, 0)
+custom_minimum_size = Vector2(228, 0)
 layout_mode = 2
 
 [node name="Side" type="VBoxContainer" parent="Margin/VBox/Body/SidePanel"]
 layout_mode = 2
-theme_override_constants/separation = 2
+theme_override_constants/separation = 4
+
+[node name="CharacterRow" type="HBoxContainer" parent="Margin/VBox/Body/SidePanel/Side"]
+layout_mode = 2
+size_flags_horizontal = 3
+alignment = 0
+
+[node name="CharacterLabel" type="Label" parent="Margin/VBox/Body/SidePanel/Side/CharacterRow"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.4, 1)
+theme_override_font_sizes/font_size = 9
+text = "CHARACTER"
+
+[node name="CharacterPicker" type="OptionButton" parent="Margin/VBox/Body/SidePanel/Side/CharacterRow"]
+custom_minimum_size = Vector2(114, 24)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/icon_max_width = 15
+script = ExtResource("2_character")
 
 [node name="LoadoutLabel" type="Label" parent="Margin/VBox/Body/SidePanel/Side"]
 layout_mode = 2
@@ -121,7 +124,7 @@ layout_mode = 2
 [node name="CarSprite" type="TextureRect" parent="Margin/VBox/Body/SidePanel/Side/CarRow"]
 unique_name_in_owner = true
 texture_filter = 1
-custom_minimum_size = Vector2(28, 44)
+custom_minimum_size = Vector2(28, 34)
 layout_mode = 2
 expand_mode = 1
 stretch_mode = 5
@@ -153,12 +156,6 @@ autowrap_mode = 2
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="Lifetime" type="Label" parent="Margin/VBox/Body/SidePanel/Side"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(0.7, 0.68, 0.62, 1)
-theme_override_font_sizes/font_size = 8
-
 [node name="StartRow" type="HBoxContainer" parent="Margin/VBox/Body/SidePanel/Side"]
 layout_mode = 2
 
@@ -176,6 +173,12 @@ custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
 theme_override_font_sizes/font_size = 10
 text = "CO-OP"
+
+[node name="Lifetime" type="Label" parent="Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.68, 0.62, 1)
+theme_override_font_sizes/font_size = 8
 
 [node name="Credits" type="Label" parent="Margin/VBox"]
 layout_mode = 2

@@ -12,8 +12,27 @@ func _ready() -> void:
 	add_child(title)
 	_toggle("Auto-aim", "auto_aim", "Snaps your aim to the zombie nearest your crosshair. Off = hardcore.")
 	_toggle("Auto-run", "auto_run", "Always sprint without holding Shift / RUN. Sprinting is noisier.")
+	var lighting := OptionButton.new()
+	lighting.name = "LightingMode"
+	lighting.add_item("Lighting  /  Night")
+	lighting.add_item("Lighting  /  Classic")
+	lighting.select(1 if GameManager.get_setting("lighting_mode") == "classic" else 0)
+	lighting.item_selected.connect(func(i: int) -> void:
+		GameManager.set_setting("lighting_mode", "night" if i == 0 else "classic"))
+	add_child(lighting)
 	_slider("Sound volume", "sfx_volume", 0.0, 1.0)
 	_slider("Screen shake", "screen_shake", 0.0, 1.5)
+	_toggle("Voice chat mic", "voice_enabled", "Lets nearby players hear you in online matches. Off by default.")
+	var voice_mode := OptionButton.new()
+	voice_mode.name = "VoiceMode"
+	voice_mode.add_item("Mic  /  Push to talk (hold T)")
+	voice_mode.add_item("Mic  /  Open mic (voice activated)")
+	voice_mode.select(1 if GameManager.get_setting("voice_mode") == "open" else 0)
+	voice_mode.item_selected.connect(func(i: int) -> void:
+		GameManager.set_setting("voice_mode", "push" if i == 0 else "open"))
+	add_child(voice_mode)
+	_slider("Voice volume", "voice_volume", 0.0, 1.0)
+	_toggle("Mute other players", "voice_mute_others", "Silences everyone's voice chat for you.")
 
 
 func _toggle(label: String, key: String, hint: String) -> void:

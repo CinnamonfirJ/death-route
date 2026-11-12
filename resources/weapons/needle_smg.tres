@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="WeaponStats" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/weapons/weapon_stats.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/items/needle_smg_pickup.png" id="2"]
+
+[resource]
+script = ExtResource("1")
+weapon_id = &"needle_smg"
+display_name = "Needle SMG"
+ammo_name = "Steel needles"
+pickup_icon = ExtResource("2")
+tracer_color = Color(0.380, 0.910, 0.980, 0.90)
+tracer_width = 1.6
+tracer_seconds = 0.052
+damage = 6.0
+fire_interval = 0.11
+mag_size = 7
+start_reserve = 21
+reload_time = 1.05
+weapon_range = 207.0
+spread_deg = 10.0
+durability_loss_per_shot = 0.021
+automatic = true

@@ -1,6 +1,13 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/props/explosive_barrel.gd" id="1_barrel"]
+
+[ext_resource type="Script" path="res://scripts/rooms/editor_only.gd" id="2_preview"]
+[ext_resource type="Texture2D" path="res://assets/props/flame_barrel.png" id="3_sheet"]
+
+[sub_resource type="AtlasTexture" id="preview_tex"]
+atlas = ExtResource("3_sheet")
+region = Rect2(0, 0, 64, 64)
 
 [sub_resource type="RectangleShape2D" id="shape"]
 size = Vector2(14, 10)
@@ -16,3 +23,8 @@ offset = Vector2(0, -26)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 position = Vector2(0, -4)
 shape = SubResource("shape")
+
+[node name="EditorPreview" type="Sprite2D" parent="."]
+offset = Vector2(0, -26)
+texture = SubResource("preview_tex")
+script = ExtResource("2_preview")

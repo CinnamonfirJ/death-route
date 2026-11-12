@@ -6,6 +6,7 @@
 script = ExtResource("1_ws")
 weapon_id = &"shotgun"
 display_name = "Shotgun"
+ammo_name = "Buckshot shells"
 damage = 9.0
 pellets = 7
 spread_deg = 22.0

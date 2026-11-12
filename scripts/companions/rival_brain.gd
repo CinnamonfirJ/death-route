@@ -82,6 +82,7 @@ func try_sabotage() -> bool:
 			if player.state_machine.current_name == &"Tasking" and dist < 220.0:
 				c.say(["Oops!", "*drops a toolbox*", "Whoops. My bad."].pick_random())
 				EventBus.noise_increased.emit(noise_burst, c.global_position)
+				EventBus.sound_made.emit(c.global_position, 300.0)
 				_did("noise")
 				return true
 			if GameManager.run_scrap >= 10 and dist < 200.0:

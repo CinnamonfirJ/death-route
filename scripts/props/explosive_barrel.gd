@@ -46,6 +46,7 @@ func explode() -> void:
 	Sfx.play(&"explosion", center)
 	EventBus.screen_shake_requested.emit(12.0, 0.5)
 	EventBus.noise_increased.emit(blast_noise, center)
+	EventBus.sound_made.emit(center, MatchConfig.get_config().sound_explosion)
 	for group in [&"zombies", &"player", &"cars", &"barrels"]:
 		for node in get_tree().get_nodes_in_group(group):
 			if node == self or not node.has_method(&"take_damage"):

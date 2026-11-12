@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>$GODOT_PROJECT_NAME</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #101420; color: #f7e8cf; }
+    body { font: 16px system-ui, sans-serif; }
+    canvas { display: block; width: 100%; height: 100%; outline: none; touch-action: none; }
+    #start { position: fixed; inset: 0; display: grid; place-content: center; text-align: center; gap: 12px; }
+    #start[hidden] { display: none; }
+    h1 { margin: 0; text-transform: uppercase; letter-spacing: .12em; }
+    button { min-height: 48px; color: #f7e8cf; background: #253140; border: 1px solid #dca972; font: inherit; }
+    #insets { position: fixed; inset: 0; pointer-events: none; visibility: hidden;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+    #rotate { display: none; position: fixed; z-index: 1; bottom: max(12px, env(safe-area-inset-bottom));
+      left: 50%; transform: translateX(-50%); padding: 8px 12px; border-radius: 4px;
+      background: #101420; white-space: nowrap; pointer-events: none; }
+    @media (orientation: portrait) and (pointer: coarse) { #rotate { display: block; } }
+  </style>
+  $GODOT_HEAD_INCLUDE
+</head>
+<body>
+  <canvas id="canvas" tabindex="0">This game needs WebGL 2.</canvas>
+  <div id="insets"></div>
+  <aside id="rotate">Rotate your phone for landscape play</aside>
+  <main id="start">
+    <h1>Dead Route</h1>
+    <button id="launch" disabled>Loading…</button>
+    <div id="status" role="status"></div>
+  </main>
+  <script src="$GODOT_URL"></script>
+  <script>
+    const insets = document.getElementById("insets");
+    window.deadRouteInsets = () => {
+      const style = getComputedStyle(insets);
+      return JSON.stringify([
+        parseFloat(style.paddingLeft) / innerWidth, parseFloat(style.paddingTop) / innerHeight,
+        parseFloat(style.paddingRight) / innerWidth, parseFloat(style.paddingBottom) / innerHeight,
+      ]);
+    };
+    const config = $GODOT_CONFIG;
+    const canvas = document.getElementById("canvas");
+    const launch = document.getElementById("launch");
+    const status = document.getElementById("status");
+    const engine = new Engine({ ...config, canvas });
+    const pack = config.executable + ".pck";
+    const failed = () => {
+      launch.disabled = false;
+      launch.textContent = "Retry";
+      status.textContent = "The game could not start. Check your connection and WebGL 2 support.";
+      launch.onclick = () => location.reload();
+    };
+    if (!Engine.isWebGLAvailable(2)) failed();
+    else Promise.all([engine.init(config.executable), engine.preloadFile(pack)]).then(() => {
+      launch.disabled = false;
+      launch.textContent = "Tap to play";
+      launch.onclick = () => {
+        launch.disabled = true;
+        engine.start({ args: ["--main-pack", pack, ...(config.args || [])] }).then(() => {
+          document.getElementById("start").hidden = true;
+          canvas.focus();
+        }).catch(failed);
+      };
+    }).catch(failed);
+  </script>
+</body>
+</html>

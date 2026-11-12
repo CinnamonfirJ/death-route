@@ -1,14 +1,22 @@
 extends CanvasLayer
-## Prototype HUD: player HP, car HP/fuel/speed while driving, interact prompt, kills.
-## Phase 4 reskins this with the pack's UI sheets.
+## Player health, weapons, vehicle condition, and route objectives.
 
 ## px/s -> displayed km/h. 330 px/s (starter top speed) reads ~120 km/h.
 const SPEED_TO_KMH := 0.36
+const WEAPON_SHEET := preload("res://assets/weapons/weapons_static_sheet.png")
+const WEAPON_REGIONS := {
+	&"pistol": Rect2(43, 12, 11, 8),
+	&"shotgun": Rect2(101, 13, 22, 8),
+	&"knife": Rect2(105, 46, 14, 6),
+}
+const FOOT_CONTROLS := "WASD Move · Shift Sprint · C Crouch · LMB Attack · V Swap · R Reload · E Use · F Light · T Talk"
+const CAR_CONTROLS := "WASD Drive · Space Handbrake · Q Shove · H Horn · E Exit"
 
 var _car: Car
 var _kills := 0
+var _weapon_icon := AtlasTexture.new()
 
-@onready var player_hp: ProgressBar = %PlayerHP
+@onready var player_hp: Range = %PlayerHP
 @onready var car_panel: Control = %CarPanel
 @onready var car_name: Label = %CarName
 @onready var car_hp: ProgressBar = %CarHP
@@ -20,9 +28,12 @@ var _kills := 0
 @onready var noise_label: Label = %NoiseLabel
 @onready var noise_bar: ProgressBar = %NoiseBar
 @onready var ammo: Label = %Ammo
+@onready var weapon_name: Label = %WeaponName
+@onready var controls: Label = $Controls
 @onready var objective: Label = %Objective
 @onready var scrap_label: Label = %Scrap
 @onready var party: Label = %Party
+@onready var light_status: Label = %LightStatus
 
 const MODE_TEXT := {1: "following", 2: "waiting", 3: "in the car"}
 var _party_cd := 0.0
@@ -36,11 +47,15 @@ var _dead := false
 
 
 func _ready() -> void:
+	_weapon_icon.atlas = WEAPON_SHEET
+	%WeaponIcon.texture = _weapon_icon
+	controls.text = FOOT_CONTROLS
 	%PizzaIcon.texture = Assets.item_icon("pizza")
 	EventBus.pizza_status_changed.connect(func(t: String) -> void: %PizzaLabel.text = t)
 	EventBus.noise_level_changed.connect(_on_noise_level)
 	EventBus.noise_threshold_reached.connect(_on_noise_tier)
-	EventBus.ammo_changed.connect(_on_ammo)
+	EventBus.ammo_changed.connect(_refresh_weapon.unbind(3))
+	EventBus.weapon_switched.connect(_refresh_weapon)
 	EventBus.objective_changed.connect(func(t: String) -> void: objective.text = t)
 	EventBus.hud_message.connect(_banner)
 	EventBus.weapon_jammed.connect(func() -> void: _banner("*click*  JAMMED. Maintain your gun."))
@@ -57,9 +72,16 @@ func _ready() -> void:
 	EventBus.car_fuel_changed.connect(_on_car_changed.unbind(2))
 	EventBus.interact_prompt_changed.connect(func(t: String) -> void: prompt.text = t)
 	EventBus.zombie_killed.connect(_on_zombie_killed)
+	var feed: Control = load("res://scripts/ui/kill_feed.gd").new()
+	add_child(feed)
 
 
 func _process(delta: float) -> void:
+	var player := Net.local_player()
+	var lamp := player.get_node_or_null(^"Flashlight") if player else null
+	var on := bool(lamp.get("active")) if lamp else false
+	light_status.text = "LIGHT ON" if on else "LIGHT OFF"
+	light_status.self_modulate = Color("#b9efb3") if on else Color("#b0b4c3")
 	_party_cd -= delta
 	if _party_cd <= 0.0:
 		_party_cd = 0.25
@@ -81,10 +103,14 @@ func _refresh_party() -> void:
 
 func _on_player_damaged(_amount: float, hp: float) -> void:
 	var player := Net.local_player()
-	if player:
-		$TopLeft/HPLabel.text = GameManager.PLAYABLE_CHARACTERS[player.character_id].to_upper()
-		player_hp.max_value = player.max_hp
+	if player == null:
+		return
+	$TopLeft/HPLabel.text = GameManager.PLAYABLE_CHARACTERS[player.character_id].to_upper()
+	player_hp.max_value = player.max_hp
 	player_hp.value = hp
+	if _dead and hp > 0.0:
+		_dead = false
+		message.hide()
 
 
 func _on_player_died() -> void:
@@ -92,7 +118,10 @@ func _on_player_died() -> void:
 	if _banner_tween:
 		_banner_tween.kill()
 	message.modulate.a = 1.0
-	message.text = "DOWNED\nA teammate can revive you" if Net.is_online() else "YOU DIED"
+	if MatchState.active:
+		message.text = "YOU DIED\nRespawning in %ds" % roundi(MatchState.cfg.respawn_time)
+	else:
+		message.text = "DOWNED\nA teammate can revive you" if Net.is_online() else "YOU DIED"
 	message.visible = true
 
 
@@ -124,12 +153,28 @@ func _banner(text: String) -> void:
 	_banner_tween.tween_callback(func() -> void: message.visible = false)
 
 
-func _on_ammo(in_mag: int, reserve: int, reloading: bool) -> void:
-	ammo.text = "RELOADING..." if reloading else "%d / %d" % [in_mag, reserve]
+func _refresh_weapon() -> void:
+	var player := Net.local_player() as Player
+	if player == null:
+		return
+	var weapon := player.weapon
+	var id := &"knife" if weapon.knife_equipped else weapon.stats.weapon_id
+	_weapon_icon.region = WEAPON_REGIONS.get(id, WEAPON_REGIONS[&"pistol"])
+	%WeaponIcon.texture = weapon.stats.pickup_icon if not weapon.knife_equipped and weapon.stats.pickup_icon else _weapon_icon
+	weapon_name.text = "Knife" if weapon.knife_equipped else weapon.stats.display_name
+	if weapon.knife_equipped:
+		ammo.text = "Melee"
+	else:
+		ammo.text = "Reloading..." if weapon.is_reloading else "%d / %d" % [weapon.in_mag, weapon.reserve]
+		if is_zero_approx(weapon.durability):
+			ammo.text = "BROKEN"
+		elif not weapon.is_reloading and weapon.in_mag + weapon.reserve == 0:
+			ammo.text = "OUT OF AMMO"
 
 
 func _on_entered_car(car: Node2D) -> void:
 	_car = car
+	controls.text = CAR_CONTROLS
 	car_name.text = _car.stats.display_name
 	car_panel.visible = true
 	_on_car_changed(car)
@@ -137,6 +182,7 @@ func _on_entered_car(car: Node2D) -> void:
 
 func _on_exited_car(_c: Node2D) -> void:
 	_car = null
+	controls.text = FOOT_CONTROLS
 	car_panel.visible = false
 
 

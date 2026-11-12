@@ -41,6 +41,8 @@ func physics_update(delta: float) -> void:
 	_cooldown -= delta
 	if Input.is_action_just_pressed(&"shove"):
 		car.shove_latchers()
+	if Input.is_action_just_pressed(&"horn"):
+		car.honk()
 	var backseat := car.passengers.any(func(c) -> bool: return is_instance_valid(c) and c.is_turned)
 	if backseat:
 		_set_prompt("SOMETHING IN THE BACK SEAT!  Stop and get out [E]")

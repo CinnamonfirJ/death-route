@@ -1,0 +1,37 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/zombies/zombie.gd" id="1_zombie"]
+
+[sub_resource type="CircleShape2D" id="body_shape"]
+radius = 6.0
+
+[node name="Skitter" type="CharacterBody2D"]
+collision_layer = 8
+collision_mask = 271
+motion_mode = 1
+script = ExtResource("1_zombie")
+zombie_id = &"zombie_skitter"
+visual_id = &"zombie_latcher"
+visual_tint = Color(0.96, 0.53, 0.71, 1)
+voice = &"zombie_skitter"
+attack_voice = &"zombie_skitter"
+max_hp = 40.0
+wander_speed = 18.0
+chase_speed = 48.0
+attack_damage = 10.0
+attack_cooldown = 0.85
+rush_speed_mult = 1.58
+rush_duration = 0.44
+rush_interval = 2.4
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+offset = Vector2(0, -14)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, -4)
+shape = SubResource("body_shape")
+
+[node name="NavigationAgent2D" type="NavigationAgent2D" parent="."]
+path_desired_distance = 8.0
+target_desired_distance = 10.0
+radius = 8.0

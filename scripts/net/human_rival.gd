@@ -54,6 +54,7 @@ func try_sabotage() -> String:
 		kind = "undo"
 	else:
 		EventBus.noise_increased.emit(NOISE, player.global_position)
+		EventBus.sound_made.emit(player.global_position, 300.0)
 		kind = "noise"
 	cooldown = COOLDOWN
 	evidence_left = EVIDENCE_TIME

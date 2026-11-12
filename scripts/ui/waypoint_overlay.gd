@@ -25,7 +25,6 @@ func _draw() -> void:
 	var to_screen := get_viewport().get_canvas_transform()
 	var player := Net.local_player() as Node2D
 	var font := get_theme_default_font()
-	_draw_lock_on(to_screen, player)
 	var used: Array[Vector2] = []  # edge arrows already drawn this frame
 	for target in _targets.keys():
 		if not is_instance_valid(target):
@@ -71,24 +70,6 @@ func _draw_label(font: Font, center: Vector2, text: String, color: Color) -> voi
 	var start := center - Vector2(width * 0.5, 0)
 	draw_string_outline(font, start, text, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, 3, Color.BLACK)
 	draw_string(font, start, text, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, color)
-
-
-## Auto-aim lock: small corner brackets around the zombie you'll hit.
-func _draw_lock_on(to_screen: Transform2D, player: Node2D) -> void:
-	if player == null or not player.visible or not player.is_on_foot():
-		return
-	var t = player.aim_target
-	if t == null or not is_instance_valid(t) or t.is_dead:
-		return
-	var c: Vector2 = to_screen * (t.global_position + Vector2(0, -12))
-	var r := 9.0
-	var l := 4.0
-	var col := Color(1.0, 0.35, 0.3, 0.85)
-	for sx in [-1.0, 1.0]:
-		for sy in [-1.0, 1.0]:
-			var corner := c + Vector2(sx * r, sy * r)
-			draw_line(corner, corner - Vector2(sx * l, 0), col, 1.5)
-			draw_line(corner, corner - Vector2(0, sy * l), col, 1.5)
 
 
 ## Edge arrows that would land on a HUD panel slide down to just below it.

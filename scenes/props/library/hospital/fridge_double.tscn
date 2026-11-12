@@ -1,0 +1,12 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/rooms/prop.gd" id="1_h4nwa"]
+[ext_resource type="Texture2D" path="res://assets/tilesets/interior_32.png" id="2_3vxrf"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_kakp5"]
+atlas = ExtResource("2_3vxrf")
+region = Rect2(207, 288, 34, 48)
+
+[node name="FridgeDouble" type="StaticBody2D" unique_id=1781148768]
+script = ExtResource("1_h4nwa")
+texture = SubResource("AtlasTexture_kakp5")

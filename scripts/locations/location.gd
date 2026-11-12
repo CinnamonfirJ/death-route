@@ -61,11 +61,27 @@ func _ready() -> void:
 	roads.material = road
 	_build_bounds(map_rect())
 	_build_navigation(map_rect())
+	var camera := get_node_or_null(^"GameCamera") as GameCamera
+	if camera:
+		camera.set_play_bounds(map_rect())
+	var lighting := RoomLighting.new()
+	lighting.name = "RoomLighting"
+	add_child(lighting)
+	lighting.configure(self)
 	pizza = PIZZA_SCENE.instantiate()
 	pizza.customer = customer
 	customer.pizza = pizza
 	entities.add_child(pizza)
 	pizza.changed.connect(_on_pizza_changed)
+	if Net.is_versus():
+		# Versus: every team gets its own pizza + drop-off (MatchState); the shared ones sit out.
+		MatchState.begin(self)
+		customer.pizza = null
+		customer.visible = false
+		customer.process_mode = Node.PROCESS_MODE_DISABLED
+		pizza.visible = false
+		pizza.process_mode = Node.PROCESS_MODE_DISABLED
+		$NoiseDirector.wave_size_mult *= MatchState.cfg.versus_wave_mult
 	if GameManager.phase != GameManager.Phase.RUN:
 		GameManager.start_run(location_id)  # launched directly from the editor
 	EventBus.player_died.connect(_on_player_died)
@@ -97,16 +113,30 @@ func _setup_online() -> void:
 
 
 func _on_all_peers_ready() -> void:
+	if MatchState.active:
+		await MatchState.host_setup()
+		player.global_position = MatchState.spawn_point(1)
 	var i := 0
 	for id in Net.players:
 		if id == 1:
 			continue  # the scene's own Player node is the host's handyman
-		i += 1
 		Net.spawn(entities, "res://scenes/player/player.tscn",
-			{"name": "Player_%d" % id, "position": player.position + Vector2(20 * i, 16),
+			{"name": "Player_%d" % id,
+				"position": MatchState.spawn_point(id) if MatchState.active else _guest_start(i),
 				"character_id": Net.peer_character(id)})
+		i += 1
 	_spawn_dynamic()
-	_place_pizza()
+	if not MatchState.active:
+		_place_pizza()
+
+
+func _exit_tree() -> void:
+	if MatchState.location == self:
+		MatchState.end()
+
+
+func _guest_start(index: int) -> Vector2:
+	return player.position + Vector2(20 * (index + 1), 16)
 
 
 ## Shared actors (zombies, spare cars, loot). Subclasses that defer them override this.
@@ -130,6 +160,14 @@ func finish_route() -> void:
 
 ## Called on every machine when the host ends an online run.
 func finish_networked(success: bool, info: Dictionary) -> void:
+	if info.get("versus", false):
+		var w: int = info.get("winner", -1)
+		var mine := MatchState.local_team()
+		var extra_v := {"versus": true, "result": "draw" if w == -1 else ("win" if w == mine else "lose"),
+			"reason": info.get("reason", ""), "board": info.get("board", ""),
+			"winner_name": info.get("winner_name", "")}
+		_finish(w == mine, extra_v)
+		return
 	var extra := {}
 	var rival_id: int = info.get("rival_id", 0)
 	if rival_id != 0:
@@ -179,11 +217,11 @@ func _place_pizza() -> void:
 # ---------- Jobs + objective ----------
 
 func _setup_tasks() -> void:
-	for n in entities.get_children():
+	for n in entities.find_children("*", "StaticBody2D", true, false):
 		if n is HoldTask:
 			tasks.append(n)
 			n.completed.connect(_on_task_completed)
-			EventBus.waypoint_set.emit.call_deferred(n, "JOB")
+			EventBus.waypoint_set.emit.call_deferred(n, n.waypoint_label)
 	_update_objective.call_deferred()
 
 
@@ -193,6 +231,9 @@ func _on_task_completed(task: HoldTask) -> void:
 
 
 func _update_objective() -> void:
+	if MatchState.active:
+		MatchState._refresh_hud()
+		return
 	var lines: Array[String] = []
 	if pizza.delivered:
 		EventBus.pizza_status_changed.emit("Pizza delivered")
@@ -235,6 +276,9 @@ func _record_survivors_at_customer() -> void:
 # ---------- End of run ----------
 
 func _on_player_died() -> void:
+	if MatchState.active:
+		MatchState.report_local_death()  # respawn instead of being downed
+		return
 	if Net.is_online():
 		# Downed, not dead: a teammate can revive. The host ends the run if everyone's down.
 		Net.report_down(true)
@@ -267,7 +311,8 @@ func _finish(success: bool, extra_in := {}) -> void:
 				EventBus.scrap_collected.emit(SURVIVOR_BONUS)
 	if _rival_note != "":
 		extra["rival"] = _rival_note
-	summary.show_summary(GameManager.end_run(success, me.weapon.durability if me else -1.0, extra))
+	summary.show_summary(GameManager.end_run(success, me.weapon.loadout_condition() if me else -1.0,
+		extra, me.weapon.started_with() if me else &""))
 
 
 # ---------- Companions ----------

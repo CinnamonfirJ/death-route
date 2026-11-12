@@ -6,13 +6,26 @@ Dead Route is a Godot 4.7 zombie-survival delivery game with solo play and WebSo
 
 Find the pizza, pick it up, and hand it to the customer NPC. The handoff updates the delivery objective and leaves the game running. After the handoff and all route jobs, choose **Finish route** from the pause menu. In co-op, the host finishes the route for the crew.
 
-Scrap comes from loot, jobs, and survivor or rival outcomes. A successful run banks all the scrap earned during that run. A failed or abandoned solo run banks half, rounded down. Banked scrap buys upgrades and weapon maintenance in the Garage. The balance and last run summary live in the local Godot save at `user://save_game.save`. The project currently has no wallet sign-in, reward backend, or on-chain payouts.
+Scrap comes from loot, jobs, and survivor or rival outcomes. A successful run banks all the scrap earned during that run. A failed or abandoned solo run banks half, rounded down. Banked scrap buys upgrades and weapon maintenance in the Garage. The balance, last run summary, and top eight successful runs live in the local Godot save at `user://save_game.save`. The title screen's leaderboard reads this local history. **Settings → Lighting** switches between Night and Classic. Press **F** to toggle the flashlight and aim it with the mouse. On touch, use **LIGHT** and the aim stick.
 
 | Game event | Where it happens |
 | --- | --- |
 | Pizza pickup and handoff | [`PizzaCargo._try_interaction()`](scripts/pickups/pizza_cargo.gd) checks the carrier and interaction distance. The host runs this check in co-op. |
 | Successful route completion | [`Location.finish_route()`](scripts/locations/location.gd) checks that the pizza was handed over and every job is done. [`Net.end_run()`](scripts/autoload/net.gd) broadcasts the result in co-op. |
 | Local scrap and run history | [`GameManager.end_run()`](scripts/autoload/game_manager.gd) calculates banked scrap, updates the summary, and saves on each player's machine. |
+
+## Google sign-in and NEAR wallet
+
+Use the [account setup guide](AUTH_SETUP.md) to configure Google, connect MyNearWallet, and point the bridge at the minted shotgun NFT. The wallet holding that NFT can select the shotgun in the Garage. The other game modes and weapons are available to guests.
+
+Shop uses local scrap. Earn shows completed deliveries and wallet status. NEAR purchases and reward claims require a separate contract and verified run service.
+
+## Gameplay tuning
+
+- Edit `resources/weapons/*.tres` for ammo, damage, reloads, wear, and tracers.
+- Edit the Skitter and Guard scenes for health, speed, sound, and behavior. Their wave timing and frequency are exported on `NoiseDirector`.
+- Select a pool under `AcidPools` in Camp or Route 9 to change its radii, tick damage, or bubble effects. Move its matching markers to relocate the loot.
+- Generator sound, shake, and light are exported on the repair jobs. Flashlight range and intensity are exported on the player scene. Night ambient and flower settings are in `scripts/locations/room_lighting.gd`.
 
 ## NEAR rewards handoff
 

@@ -1,0 +1,75 @@
+name: Build and deploy Dead Route
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dead-route-pages-production
+  cancel-in-progress: false
+
+env:
+  GODOT_VERSION: 4.7.2
+
+jobs:
+  web:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Godot and its matching Web template
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${GODOT_VERSION}-stable"
+          base="https://github.com/godotengine/godot-builds/releases/download/$tag/Godot_v$tag"
+          curl --fail --location --retry 3 "${base}_linux.x86_64.zip" -o "$RUNNER_TEMP/godot.zip"
+          curl --fail --location --retry 3 "${base}_export_templates.tpz" -o "$RUNNER_TEMP/templates.tpz"
+          unzip -q "$RUNNER_TEMP/godot.zip" -d "$RUNNER_TEMP/godot"
+          mv "$RUNNER_TEMP/godot/Godot_v${tag}_linux.x86_64" "$RUNNER_TEMP/godot/godot"
+          echo "$RUNNER_TEMP/godot" >> "$GITHUB_PATH"
+          template_dir="${XDG_DATA_HOME:-$HOME/.local/share}/godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "$template_dir"
+          unzip -j "$RUNNER_TEMP/templates.tpz" 'templates/web_nothreads_release.zip' -d "$template_dir"
+
+      - name: Export the web game
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/web
+          touch build/.gdignore
+          godot --headless --editor --import --quit
+          godot --headless --export-release Web "$PWD/build/web/index.html"
+          python3 tools/package_cloudflare_web.py build/web build/pages
+
+      - name: Save the packaged Web build
+        uses: actions/upload-artifact@v4
+        with:
+          name: dead-route-cloudflare
+          path: build/pages/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Check Cloudflare credentials
+        id: credentials
+        env:
+          TOKEN_CONFIGURED: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+        run: |
+          echo "configured=$TOKEN_CONFIGURED" >> "$GITHUB_OUTPUT"
+          if [ "$TOKEN_CONFIGURED" != true ]; then
+            echo "::warning::Build complete. Add the CLOUDFLARE_API_TOKEN Actions secret to enable deployment."
+          fi
+
+      - name: Publish to dead-route.pages.dev
+        if: steps.credentials.outputs.configured == 'true'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: d088a4356754db5a5c087e01f50af5fc
+          command: pages deploy build/pages --project-name=dead-route --branch=main

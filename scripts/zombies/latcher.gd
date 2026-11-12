@@ -88,15 +88,15 @@ func unlatch(fling: Vector2) -> void:
 	stun(1.2, fling)
 
 
-func take_damage(amount: float, knockback := Vector2.ZERO) -> void:
+func take_damage(amount: float, knockback := Vector2.ZERO, acid := false) -> void:
 	if latched_car != null:
 		_grip -= 3  # a bullet loosens its grip a lot
 		knockback = Vector2.ZERO
-		super(amount, knockback)
+		super(amount, knockback, acid)
 		if not is_dead and _grip <= 0:
 			_throw_off(latched_car)
 		return
-	super(amount, knockback)
+	super(amount, knockback, acid)
 
 
 func die(by_car: bool, fling := Vector2.ZERO) -> void:

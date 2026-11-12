@@ -1,7 +1,7 @@
 extends Location
 ## Procedural sandbox (dev/testing): road grid, random obstacles, spare cars, a
 ## fuel-pump job, explosive barrels, a mixed zombie population. The real run maps
-## are hand-built MapLocations (hospital/camp/wasteland); this one stays for tests.
+## are hand-built Rooms (res://rooms/*.tscn); this one stays for tests.
 
 const PROPS: Array[String] = [
 	"wreck_red_v", "wreck_red_h", "wreck_blue_v", "wreck_blue_h", "wreck_brown_v", "wreck_brown_h",

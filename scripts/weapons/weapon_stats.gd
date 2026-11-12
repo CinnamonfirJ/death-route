@@ -5,6 +5,11 @@ extends Resource
 ## Key into the asset manifest's "weapons" section (sprite).
 @export var weapon_id: StringName = &"pistol"
 @export var display_name := "Pistol"
+@export var ammo_name := "Standard rounds"
+@export var pickup_icon: Texture2D
+@export var tracer_color := Color(1.0, 0.92, 0.6, 0.9)
+@export var tracer_width := 2.5
+@export var tracer_seconds := 0.08
 
 @export_group("Damage")
 @export var damage := 14.0

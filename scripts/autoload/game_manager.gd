@@ -12,6 +12,8 @@ const DEFAULT_SAVE_PATH := "user://save_game.save"
 const SAVE_VERSION := 2
 const CATALOG_PATH := "res://resources/upgrades/upgrade_catalog.tres"
 const GARAGE_SCENE := "res://scenes/ui/garage.tscn"
+const MAIN_MENU_SCENE := "res://scenes/ui/main_menu.tscn"
+const LEADERBOARD_SIZE := 8
 const DEFAULT_CHARACTER := &"player_handyman"
 const PLAYABLE_CHARACTERS := {
 	DEFAULT_CHARACTER: "Handyman",
@@ -22,12 +24,12 @@ const PLAYABLE_CHARACTERS := {
 
 ## Run destinations. "hidden" ones aren't offered in the Garage (dev/test maps).
 const LOCATIONS := {
-	&"hospital": {"scene": "res://scenes/locations/hospital.tscn", "name": "St. Mercy Hospital",
-		"blurb": "Restore backup power, pack the meds. Tight corridors. Something big in surgery."},
-	&"camp": {"scene": "res://scenes/locations/camp.tscn", "name": "Survivor Camp",
-		"blurb": "Water pump and radio are down. Half the camp has turned. Deliver to the plaza."},
-	&"wasteland": {"scene": "res://scenes/locations/wasteland.tscn", "name": "Route 9 Gas & Junk",
-		"blurb": "Fix the pump and generator. The customer waits at the west depot."},
+	&"hospital": {"scene": "res://rooms/hospital.tscn", "name": "St. Mercy Hospital",
+		"blurb": "Split up between triage, surgery, and the power plant. Drive the ambulance loop."},
+	&"camp": {"scene": "res://rooms/camp.tscn", "name": "Survivor Camp",
+		"blurb": "Work the gardens, market, and radio ridge. Footpaths cut through the palisades."},
+	&"wasteland": {"scene": "res://rooms/wasteland.tscn", "name": "Route 9 Gas & Junk",
+		"blurb": "Wind through the scrapyard to the pumps, crane bay, and dispatch office."},
 	&"sandbox": {"scene": "res://scenes/locations/test_drive.tscn", "name": "Test Drive",
 		"blurb": "Procedural sandbox.", "hidden": true},
 }
@@ -36,8 +38,6 @@ const WEAPONS := {
 	&"pistol": "res://resources/weapons/pistol.tres",
 	&"shotgun": "res://resources/weapons/shotgun.tres",
 }
-## Weapon -> unlock key. Weapons not listed are always available.
-const WEAPON_UNLOCKS := {&"shotgun": &"unlock.shotgun"}
 ## Scrap to fully repair a weapon from 0% durability.
 const FULL_REPAIR_COST := 60
 
@@ -55,10 +55,13 @@ var loadout_weapon: StringName = &"pistol"
 var selected_character: StringName = DEFAULT_CHARACTER
 var selected_location: StringName = &"wasteland"
 var stats := { "runs": 0, "successful_runs": 0, "zombies_killed": 0, "best_run_scrap": 0 }
+var run_scores: Array = []
 
 ## Player options (saved). Auto-aim on by default for casual play; hardcore players switch it off.
 const DEFAULT_SETTINGS := {
 	"auto_aim": true, "auto_run": false, "sfx_volume": 0.8, "screen_shake": 1.0,
+	"lighting_mode": "night",
+	"voice_enabled": false, "voice_mode": "push", "voice_volume": 0.8, "voice_mute_others": false,
 }
 var settings := DEFAULT_SETTINGS.duplicate()
 
@@ -77,6 +80,7 @@ func set_setting(key: String, value: Variant) -> void:
 # --- Per-run ---
 var run_scrap: int = 0
 var run_kills: int = 0
+var _run_location: StringName
 ## Summary of the last finished run, shown by the Garage. Empty before the first run.
 var last_run: Dictionary = {}
 
@@ -128,6 +132,7 @@ func set_character(id: StringName) -> void:
 
 func start_run(location_id: StringName) -> void:
 	phase = Phase.RUN
+	_run_location = location_id
 	run_scrap = 0
 	run_kills = 0
 	EventBus.run_started.emit(location_id)
@@ -135,7 +140,7 @@ func start_run(location_id: StringName) -> void:
 
 ## Banks scrap (half on failure), records stats, saves. Returns the summary.
 ## `extra` is merged into the summary (e.g. survivors delivered).
-func end_run(success: bool, weapon_durability_now := -1.0, extra := {}) -> Dictionary:
+func end_run(success: bool, weapon_durability_now := -1.0, extra := {}, starting_weapon: StringName = &"") -> Dictionary:
 	if phase != Phase.RUN:
 		return last_run
 	var earned := run_scrap if success else floori(run_scrap / 2.0)
@@ -144,13 +149,21 @@ func end_run(success: bool, weapon_durability_now := -1.0, extra := {}) -> Dicti
 	stats.zombies_killed += run_kills
 	if success:
 		stats.successful_runs += 1
-	stats.best_run_scrap = maxi(int(stats.best_run_scrap), earned)
+		stats.best_run_scrap = maxi(int(stats.best_run_scrap), earned)
+		run_scores.append({"location": String(_run_location), "scrap": earned, "kills": run_kills})
+		run_scores.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+			if a.scrap == b.scrap:
+				return a.kills > b.kills
+			return a.scrap > b.scrap)
+		if run_scores.size() > LEADERBOARD_SIZE:
+			run_scores.resize(LEADERBOARD_SIZE)
+	var run_weapon := starting_weapon if WEAPONS.has(starting_weapon) else loadout_weapon
 	if weapon_durability_now >= 0.0:
-		weapon_durability[String(loadout_weapon)] = weapon_durability_now
+		weapon_durability[String(run_weapon)] = weapon_durability_now
 	last_run = {
 		"success": success, "scrap_found": run_scrap, "scrap_banked": earned,
-		"kills": run_kills, "weapon": String(loadout_weapon),
-		"durability": get_durability(loadout_weapon),
+		"kills": run_kills, "weapon": String(run_weapon),
+		"durability": get_durability(run_weapon),
 	}
 	last_run.merge(extra, true)
 	phase = Phase.GARAGE
@@ -251,7 +264,10 @@ func upgraded_weapon_stats(base: WeaponStats) -> WeaponStats:
 # ---------- Weapons: loadout + maintenance ----------
 
 func is_weapon_available(id: StringName) -> bool:
-	return not WEAPON_UNLOCKS.has(id) or is_unlocked(WEAPON_UNLOCKS[id])
+	if id == &"shotgun":
+		var wallet := get_node_or_null("/root/WalletSession")
+		return wallet != null and wallet.has_shotgun()
+	return WEAPONS.has(id)
 
 
 func set_loadout(id: StringName) -> bool:
@@ -263,7 +279,8 @@ func set_loadout(id: StringName) -> bool:
 
 
 func loadout_stats() -> WeaponStats:
-	return load(WEAPONS[loadout_weapon])
+	var available := loadout_weapon if is_weapon_available(loadout_weapon) else &"pistol"
+	return load(WEAPONS[available])
 
 
 func get_durability(id: StringName) -> float:
@@ -296,6 +313,7 @@ func save_game() -> void:
 		"selected_location": String(selected_location),
 		"stats": stats,
 		"last_run": last_run,
+		"run_scores": run_scores,
 		"settings": settings,
 	}
 	# Write to a temp file, then swap it in, so a crash mid-write can't corrupt the save.
@@ -337,6 +355,12 @@ func load_game() -> void:
 		selected_location = &"wasteland"
 	stats.merge(data.get("stats", {}), true)
 	last_run = data.get("last_run", {})
+	var saved_scores: Variant = data.get("run_scores", [])
+	run_scores.clear()
+	if saved_scores is Array:
+		for score in saved_scores.slice(0, LEADERBOARD_SIZE):
+			if score is Dictionary and score.has_all(["location", "scrap", "kills"]):
+				run_scores.append(score)
 	settings = DEFAULT_SETTINGS.duplicate()
 	settings.merge(data.get("settings", {}), true)
 
@@ -350,5 +374,6 @@ func reset_save() -> void:
 	selected_location = &"wasteland"
 	stats = { "runs": 0, "successful_runs": 0, "zombies_killed": 0, "best_run_scrap": 0 }
 	last_run = {}
+	run_scores.clear()
 	settings = DEFAULT_SETTINGS.duplicate()
 	save_game()

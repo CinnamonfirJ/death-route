@@ -1,0 +1,12 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/rooms/prop.gd" id="1_gl6xn"]
+[ext_resource type="Texture2D" path="res://assets/tilesets/interior_32.png" id="2_2ttyk"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_6mvus"]
+atlas = ExtResource("2_2ttyk")
+region = Rect2(56, 480, 40, 32)
+
+[node name="BedB" type="StaticBody2D" unique_id=833332767]
+script = ExtResource("1_gl6xn")
+texture = SubResource("AtlasTexture_6mvus")

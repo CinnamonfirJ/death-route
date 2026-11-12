@@ -53,6 +53,8 @@ var _jammed_until := 0
 ## Online: peer id of whoever is driving (0 = nobody). Every peer knows it; only the
 ## driver's machine has `driver` set and simulates the car.
 var driver_id := 0
+var _engine_sound_cd := 0.0
+var _horn_cd := 0.0
 var _remote_latch_count := 0
 
 var _steer := 0.0
@@ -60,6 +62,7 @@ var _rammed_at := {}           # instance_id -> msec of last ram
 var _last_fuel_int := -1
 var _skid_lines: Array[Line2D] = []
 var _flash_tween: Tween
+var _headlights := Node2D.new()
 
 @onready var sprite: Sprite2D = $Sprite2D
 @onready var body_shape: CollisionShape2D = $CollisionShape2D
@@ -80,6 +83,7 @@ func _ready() -> void:
 	Fx.attach_shadow(self, sprite.texture.get_size() * SPRITE_SCALE + Vector2(15, 15),
 		Vector2(3, 4))
 	_fit_shapes()
+	_setup_headlights()
 	# Move before other bodies each tick so the riding driver copies this frame's position.
 	process_physics_priority = -1
 	hp = stats.max_hp * start_hp_ratio
@@ -96,9 +100,10 @@ var _engine: AudioStreamPlayer2D
 
 ## Engine hum while someone's driving; pitch climbs with speed (all machines).
 func _process(_delta: float) -> void:
+	var driven := has_driver() and not is_destroyed
+	_headlights.visible = driven and RoomLighting.is_night()
 	if _engine == null:
 		return
-	var driven := has_driver() and not is_destroyed
 	if driven != _engine.playing:
 		if driven:
 			_engine.play()
@@ -108,6 +113,18 @@ func _process(_delta: float) -> void:
 		var t := clampf(velocity.length() / stats.top_speed, 0.0, 1.0)
 		_engine.pitch_scale = 0.75 + t * 0.9
 		_engine.volume_db = -12.0 + t * 6.0
+
+
+func _setup_headlights() -> void:
+	_headlights.name = "Headlights"
+	_headlights.hide()
+	add_child(_headlights)
+	var half := sprite.texture.get_size() * SPRITE_SCALE * 0.5
+	for side in [-1.0, 1.0]:
+		var lamp := RoomLighting.make_beam(225.0, 1.05, Color(1.0, 0.87, 0.62))
+		lamp.position = Vector2(side * half.x * 0.66, -half.y + 3.0)
+		lamp.rotation = -PI * 0.5 + side * 0.06
+		_headlights.add_child(lamp)
 
 
 func _randomize_stats() -> void:
@@ -181,6 +198,10 @@ func _physics_process(delta: float) -> void:
 	if throttle != 0.0 and not braking:
 		_burn_fuel(absf(throttle) * stats.fuel_burn_rate * delta)
 		EventBus.noise_increased.emit(absf(throttle) * engine_noise_per_sec * delta, global_position)
+		_engine_sound_cd -= delta
+		if _engine_sound_cd <= 0.0 and absf(throttle) > 0.3:
+			_engine_sound_cd = 0.5
+			EventBus.sound_made.emit(global_position, MatchConfig.get_config().sound_engine)
 
 	var pre_velocity := velocity
 	move_and_slide()
@@ -215,6 +236,7 @@ func _handle_crashes(pre_velocity: Vector2) -> void:
 			Fx.impact(c.get_position(), c.get_normal().angle() + PI)
 			Sfx.play(&"crash", global_position)
 			EventBus.noise_increased.emit(crash_noise, global_position)
+			EventBus.sound_made.emit(global_position, MatchConfig.get_config().sound_crash)
 			return
 
 
@@ -449,6 +471,7 @@ func _apply_destroyed() -> void:
 	Sfx.play(&"explosion", global_position)
 	if Net.is_sim_authority():
 		EventBus.noise_increased.emit(30.0, global_position)
+		EventBus.sound_made.emit(global_position, MatchConfig.get_config().sound_explosion)
 	EventBus.screen_shake_requested.emit(10.0, 0.5)
 	destroyed.emit(self)
 	EventBus.car_destroyed.emit(self)
@@ -495,3 +518,25 @@ func _rpc_set_driver(id: int) -> void:
 
 func can_exit() -> bool:
 	return velocity.length() < EXIT_SPEED_LIMIT
+
+
+## Honk. Very loud: every zombie in a big radius heads for the car.
+func honk() -> void:
+	if _horn_cd > 0.0:
+		return
+	_horn_cd = 0.6
+	get_tree().create_timer(0.6, false).timeout.connect(func() -> void: _horn_cd = 0.0)
+	_honk_fx()
+	if Net.is_online():
+		_rpc_honk_fx.rpc()
+	EventBus.noise_increased.emit(6.0, global_position)
+	EventBus.sound_made.emit(global_position, MatchConfig.get_config().sound_horn)
+
+
+@rpc("any_peer", "call_remote", "unreliable")
+func _rpc_honk_fx() -> void:
+	_honk_fx()
+
+
+func _honk_fx() -> void:
+	Sfx.play(&"horn", global_position, 0.0, 0.02)

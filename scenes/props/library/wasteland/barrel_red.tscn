@@ -1,0 +1,12 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/rooms/prop.gd" id="1_m88bv"]
+[ext_resource type="Texture2D" path="res://assets/tilesets/wasteland_32.png" id="2_pa8me"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_vd7pi"]
+atlas = ExtResource("2_pa8me")
+region = Rect2(128, 224, 32, 32)
+
+[node name="BarrelRed" type="StaticBody2D" unique_id=1886331168]
+script = ExtResource("1_m88bv")
+texture = SubResource("AtlasTexture_vd7pi")

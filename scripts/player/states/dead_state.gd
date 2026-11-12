@@ -5,6 +5,7 @@ extends PlayerState
 func enter(_msg := {}) -> void:
 	player.velocity = Vector2.ZERO
 	player.visible = true
+	player.weapon.hide()
 	player.collision.set_deferred(&"disabled", true)
 	player.interact_area.set_deferred(&"monitoring", false)
 	player.sprite.speed_scale = 1.0
