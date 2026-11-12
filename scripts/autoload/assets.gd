@@ -191,51 +191,14 @@ func weapon_frames(id: StringName) -> SpriteFrames:
 	return sf
 
 
-## Shared UI theme from the pack's sheets: dark rope-bordered panels (panel_2),
-## light stone panels as the "LightPanel" variation (panel_1), slate buttons
-## from tileable_buttons (top half = normal, bottom half = pressed).
+## Shared title palette for the game menus and overlays.
 func ui_theme() -> Theme:
 	if _frames_cache.has("ui_theme"):
 		return _frames_cache["ui_theme"]
-	var ui: Dictionary = manifest["ui"]
 	var th := Theme.new()
 	th.default_font = ThemeDB.get_project_theme().default_font
 	th.default_font_size = 10
-
-	var dark := _nine(load(ui["panel_2"]["res"]), Rect2(0, 0, 96, 96), 16, 14)
-	var light := _nine(load(ui["panel_1"]["res"]), Rect2(0, 0, 96, 96), 16, 10)
-	th.set_stylebox(&"panel", &"PanelContainer", dark)
-	th.set_stylebox(&"panel", &"Panel", dark)
-	th.set_type_variation(&"LightPanel", &"PanelContainer")
-	th.set_stylebox(&"panel", &"LightPanel", light)
-
-	var btn_tex: Texture2D = load(ui["tileable_buttons"]["res"])
-	var normal := _nine(btn_tex, Rect2(0, 0, 96, 32), 8, 0)
-	normal.content_margin_left = 10
-	normal.content_margin_right = 10
-	normal.content_margin_top = 4
-	normal.content_margin_bottom = 6
-	var hover: StyleBoxTexture = normal.duplicate()
-	hover.modulate_color = Color(1.2, 1.2, 1.25)
-	var pressed: StyleBoxTexture = normal.duplicate()
-	pressed.region_rect = Rect2(0, 32, 96, 32)
-	var disabled: StyleBoxTexture = normal.duplicate()
-	disabled.modulate_color = Color(0.55, 0.55, 0.6, 0.8)
-	for type in [&"Button", &"OptionButton"]:
-		th.set_stylebox(&"normal", type, normal)
-		th.set_stylebox(&"hover", type, hover)
-		th.set_stylebox(&"pressed", type, pressed)
-		th.set_stylebox(&"disabled", type, disabled)
-		th.set_stylebox(&"focus", type, StyleBoxEmpty.new())
-		th.set_color(&"font_color", type, Color(0.95, 0.95, 0.9))
-		th.set_color(&"font_hover_color", type, Color.WHITE)
-		th.set_color(&"font_disabled_color", type, Color(0.6, 0.6, 0.6))
-	th.set_stylebox(&"tab_selected", &"TabContainer", pressed)
-	th.set_stylebox(&"tab_unselected", &"TabContainer", normal)
-	th.set_stylebox(&"tab_hovered", &"TabContainer", hover)
-	th.set_stylebox(&"tab_disabled", &"TabContainer", disabled)
-	th.set_stylebox(&"panel", &"TabContainer", StyleBoxEmpty.new())
-	th.set_stylebox(&"tab_focus", &"TabContainer", StyleBoxEmpty.new())
+	TitleStyle.apply(th)
 
 	var bar_bg := StyleBoxFlat.new()
 	bar_bg.bg_color = Color(0.08, 0.05, 0.07)
@@ -245,7 +208,6 @@ func ui_theme() -> Theme:
 	bar_fill.set_corner_radius_all(2)
 	th.set_stylebox(&"background", &"ProgressBar", bar_bg)
 	th.set_stylebox(&"fill", &"ProgressBar", bar_fill)
-	th.set_color(&"font_color", &"Label", Color(0.92, 0.9, 0.85))
 	_frames_cache["ui_theme"] = th
 	return th
 

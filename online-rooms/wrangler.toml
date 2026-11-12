@@ -1,0 +1,12 @@
+name = "dead-route-rooms"
+main = "relay.mjs"
+compatibility_date = "2026-06-01"
+workers_dev = true
+
+[[durable_objects.bindings]]
+name = "LOBBIES"
+class_name = "LobbyRelay"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["LobbyRelay"]

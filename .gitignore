@@ -4,6 +4,8 @@
 
 # Exported builds and itch.io packages (rebuild with the commands in BUILD.md)
 /build/
+/online-rooms/.wrangler/
+/.wrangler/
 
 # Local tool settings (machine-specific paths)
 /.claude/

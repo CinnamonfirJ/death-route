@@ -11,7 +11,7 @@ func _ready() -> void:
 	layer = 9
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_dim = ColorRect.new()
-	_dim.color = Color(0, 0, 0, 0.5)
+	_dim.color = Color(TitleStyle.INK, 0.72)
 	_dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(_dim)
 	var center := CenterContainer.new()

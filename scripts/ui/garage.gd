@@ -31,7 +31,9 @@ func _ready() -> void:
 	theme = Assets.ui_theme()
 	scrap_icon.texture = Assets.item_icon("scrap")
 	start_button.pressed.connect(GameManager.launch_run)
-	_style_start_button()
+	$Background.hide()
+	TitleStyle.add_backdrop(self)
+	TitleStyle.primary(start_button)
 	%CoopButton.pressed.connect(func() -> void:
 		get_tree().change_scene_to_file("res://scenes/ui/lobby.tscn"))
 	_add_settings_button()
@@ -87,18 +89,6 @@ func _add_settings_button() -> void:
 		dim.visible = on
 	b.pressed.connect(show.bind(true))
 	close.pressed.connect(show.bind(false))
-
-
-func _style_start_button() -> void:
-	for state in [&"normal", &"hover", &"pressed"]:
-		var style := StyleBoxFlat.new()
-		style.bg_color = Color("#e8a65b") if state == &"normal" else Color("#ffc987")
-		style.border_color = Color("#713f2b")
-		style.set_border_width_all(2)
-		style.set_corner_radius_all(2)
-		start_button.add_theme_stylebox_override(state, style)
-	for state in [&"font_color", &"font_focus_color", &"font_hover_color", &"font_pressed_color"]:
-		start_button.add_theme_color_override(state, Color("#201623"))
 
 
 func _build_tabs() -> void:
@@ -172,10 +162,11 @@ func _upgrade_row(u: UpgradeDef) -> Control:
 	if level > 0:
 		head.text += "   " + u.effect_text(level)
 	head.add_theme_font_size_override(&"font_size", 10)
+	head.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	var desc := Label.new()
 	desc.text = u.description
 	desc.add_theme_font_size_override(&"font_size", 8)
-	desc.add_theme_color_override(&"font_color", Color(0.7, 0.68, 0.62))
+	desc.add_theme_color_override(&"font_color", TitleStyle.MUTED)
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	text.add_child(head)
 	text.add_child(desc)
@@ -214,6 +205,7 @@ func _maintenance_row(id: StringName) -> Control:
 	var head := Label.new()
 	head.text = stats.display_name if available else "%s  (NFT required)" % stats.display_name
 	head.add_theme_font_size_override(&"font_size", 10)
+	head.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	var bar := ProgressBar.new()
 	bar.custom_minimum_size = Vector2(0, 7)
 	bar.max_value = 1.0

@@ -1,9 +1,8 @@
 extends Control
 
-const Backdrop := preload("res://scripts/ui/title_backdrop.gd")
-const AMBER := Color("#ffc688")
-const CREAM := Color("#fff2df")
-const MUTED := Color("#b5b3cb")
+const AMBER := TitleStyle.AMBER
+const CREAM := TitleStyle.CREAM
+const MUTED := TitleStyle.MUTED
 
 var _menu: CenterContainer
 var _overlay: Control
@@ -17,9 +16,7 @@ var _wallet_actions: VBoxContainer
 func _ready() -> void:
 	GameManager.phase = GameManager.Phase.MENU
 	theme = Assets.ui_theme()
-	var backdrop := Backdrop.new()
-	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(backdrop)
+	TitleStyle.add_backdrop(self)
 	_menu = CenterContainer.new()
 	_menu.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(_menu)
@@ -149,7 +146,7 @@ func _open(title: String) -> void:
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var frame := PanelContainer.new()
 	frame.custom_minimum_size.x = 334
-	frame.add_theme_stylebox_override(&"panel", _surface(Color("#151428"), Color("#784650"), 14))
+	frame.add_theme_stylebox_override(&"panel", TitleStyle.surface(TitleStyle.INK, TitleStyle.BORDER, 14))
 	center.add_child(frame)
 	_panel = VBoxContainer.new()
 	_panel.add_theme_constant_override(&"separation", 7)
@@ -204,25 +201,8 @@ func _button(parent: Container, value: String, action: Callable, primary := fals
 	button.custom_minimum_size.y = 24
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.add_theme_font_size_override(&"font_size", 12 if primary else 10)
-	button.add_theme_color_override(&"font_color", AMBER if primary else CREAM)
-	button.add_theme_stylebox_override(&"normal", _surface(
-		Color("#362238") if primary else Color("#1a192e"),
-		Color("#e38b56") if primary else Color("#844c57"), 5))
-	button.add_theme_stylebox_override(&"hover", _surface(Color("#4b283c"), Color("#ffc688"), 5))
-	button.add_theme_stylebox_override(&"pressed", _surface(Color("#2a1932"), Color("#ffc688"), 5))
-	var focus := _surface(Color.TRANSPARENT, AMBER, 0)
-	focus.draw_center = false
-	focus.set_expand_margin_all(1)
-	button.add_theme_stylebox_override(&"focus", focus)
+	if primary:
+		TitleStyle.primary(button)
 	button.pressed.connect(action)
 	parent.add_child(button)
 	return button
-
-
-func _surface(fill: Color, border: Color, padding: int) -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = fill
-	style.border_color = border
-	style.set_border_width_all(1)
-	style.set_content_margin_all(padding)
-	return style

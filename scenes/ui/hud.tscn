@@ -66,7 +66,7 @@ text = "LIGHT OFF"
 [node name="Party" type="Label" parent="TopLeft"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.8, 0.85, 0.95, 1)
+theme_override_colors/font_color = Color(0.71, 0.70, 0.80, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 2
 theme_override_font_sizes/font_size = 8
@@ -123,7 +123,7 @@ theme_override_constants/separation = 1
 [node name="Scrap" type="Label" parent="TopRight"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.85, 0.4, 1)
+theme_override_colors/font_color = Color(1, 0.776, 0.533, 1)
 theme_override_font_sizes/font_size = 11
 text = "Scrap: 0"
 horizontal_alignment = 2
@@ -172,7 +172,7 @@ theme_override_constants/separation = 0
 [node name="WeaponName" type="Label" parent="TopRight/WeaponStatus/WeaponText"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.85, 0.4, 1)
+theme_override_colors/font_color = Color(1, 0.776, 0.533, 1)
 theme_override_font_sizes/font_size = 9
 horizontal_alignment = 2
 
@@ -198,14 +198,14 @@ stretch_mode = 5
 [node name="PizzaLabel" type="Label" parent="TopRight/Cargo"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.85, 0.4, 1)
+theme_override_colors/font_color = Color(1, 0.776, 0.533, 1)
 theme_override_font_sizes/font_size = 10
 text = "Pizza missing"
 
 [node name="Objective" type="Label" parent="TopRight"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.85, 0.4, 1)
+theme_override_colors/font_color = Color(1, 0.776, 0.533, 1)
 theme_override_font_sizes/font_size = 9
 horizontal_alignment = 2
 autowrap_mode = 2

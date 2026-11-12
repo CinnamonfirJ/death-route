@@ -6,8 +6,14 @@ extends Control
 const LOBBY_LOCATIONS := [&"hospital", &"camp", &"wasteland"]
 
 var _name_edit: LineEdit
-var _addr_edit: LineEdit
-var _port_edit: SpinBox
+var _code_edit: LineEdit
+var _public: CheckButton
+var _browser: VBoxContainer
+var _rooms: ItemList
+var _directory_status: Label
+var _request: HTTPRequest
+var _room_title: Label
+var _identity: VBoxContainer
 var _host_btn: Button
 var _join_btn: Button
 var _leave_btn: Button
@@ -30,31 +36,40 @@ func _ready() -> void:
 	Net.roster_changed.connect(_refresh)
 	Net.status_changed.connect(func(t: String) -> void: _status.text = t)
 	_refresh()
+	_fetch_rooms()
 
 
 func _build() -> void:
-	var bg := ColorRect.new()
-	bg.color = Color(0.1, 0.09, 0.085)
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(bg)
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(center)
+	TitleStyle.add_backdrop(self)
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(420, 0)
-	center.add_child(panel)
+	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	panel.offset_left = -230
+	panel.offset_right = 230
+	panel.offset_top = -174
+	panel.offset_bottom = 174
+	add_child(panel)
+	var frame := VBoxContainer.new()
+	panel.add_child(frame)
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	frame.add_child(scroll)
 	var v := VBoxContainer.new()
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.add_theme_constant_override(&"separation", 5)
-	panel.add_child(v)
+	scroll.add_child(v)
 
 	var title := Label.new()
-	title.text = "MULTIPLAYER"
+	title.text = "ONLINE ROOMS"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override(&"font_size", 16)
-	title.add_theme_color_override(&"font_color", Color(1, 0.85, 0.4))
+	title.add_theme_color_override(&"font_color", TitleStyle.AMBER)
 	v.add_child(title)
 
+	_identity = VBoxContainer.new()
+	v.add_child(_identity)
 	var row1 := HBoxContainer.new()
-	v.add_child(row1)
+	_identity.add_child(row1)
 	row1.add_child(_label("Name"))
 	_name_edit = LineEdit.new()
 	_name_edit.name = "NameEdit"
@@ -64,38 +79,28 @@ func _build() -> void:
 	row1.add_child(_name_edit)
 
 	var character_row := HBoxContainer.new()
-	v.add_child(character_row)
+	_identity.add_child(character_row)
 	character_row.add_child(_label("Character"))
 	var picker := CharacterPicker.new()
 	picker.name = "CharacterPicker"
 	picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	character_row.add_child(picker)
 
-	var row2 := HBoxContainer.new()
-	v.add_child(row2)
-	row2.add_child(_label("Host IP / link"))
-	_addr_edit = LineEdit.new()
-	_addr_edit.name = "AddressEdit"
-	_addr_edit.text = "127.0.0.1"
-	_addr_edit.placeholder_text = "Room code, host IP, or wss:// link"
-	_addr_edit.tooltip_text = "LAN: the host's IP. Internet / browser: the host's wss:// tunnel link."
-	_addr_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row2.add_child(_addr_edit)
-	row2.add_child(_label("Port"))
-	_port_edit = SpinBox.new()
-	_port_edit.min_value = 1024
-	_port_edit.max_value = 65535
-	_port_edit.value = Net.DEFAULT_PORT
-	row2.add_child(_port_edit)
-
-	var row3 := HBoxContainer.new()
-	v.add_child(row3)
-	_host_btn = _button(row3, "Host", _on_host)
-	_join_btn = _button(row3, "Join", _on_join)
-	_leave_btn = _button(row3, "Leave", func() -> void: Net.leave(); _status.text = "Left.")
-	if not Net.can_host():
-		_host_btn.disabled = true
-		_host_btn.tooltip_text = "Browsers can't host. Join a PC or phone host."
+	_add_browser(v)
+	var room_row := HBoxContainer.new()
+	v.add_child(room_row)
+	_room_title = _label("")
+	_room_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_room_title.add_theme_color_override(&"font_color", TitleStyle.AMBER)
+	room_row.add_child(_room_title)
+	_button(room_row, "COPY CODE", func() -> void:
+		DisplayServer.clipboard_set(Net.room_code)
+		_status.text = "Room code copied.").size_flags_horizontal = Control.SIZE_FILL
+	_leave_btn = _button(room_row, "LEAVE ROOM", func() -> void:
+		Net.leave()
+		_status.text = ""
+		_fetch_rooms())
+	_leave_btn.size_flags_horizontal = Control.SIZE_FILL
 
 	_roster = RichTextLabel.new()
 	_roster.name = "Roster"
@@ -162,15 +167,15 @@ func _build() -> void:
 	_rival.toggled.connect(func(on: bool) -> void: Net.set_setting("rival", on))
 	_host_box.add_child(_rival)
 	_start_btn = _button(_host_box, "START RUN", func() -> void: Net.start_match())
+	TitleStyle.primary(_start_btn)
 
 	_status = Label.new()
 	_status.add_theme_font_size_override(&"font_size", 9)
-	_status.add_theme_color_override(&"font_color", Color(0.75, 0.72, 0.65))
+	_status.add_theme_color_override(&"font_color", TitleStyle.MUTED)
 	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_status.text = "Host a game, or join one on your network. All players need the same game version."
-	v.add_child(_status)
+	frame.add_child(_status)
 
-	_button(v, "Back to Garage", func() -> void:
+	_button(frame, "BACK TO GARAGE", func() -> void:
 		Net.leave()
 		get_tree().change_scene_to_file(GameManager.GARAGE_SCENE))
 
@@ -187,22 +192,130 @@ func _button(parent: Control, text: String, cb: Callable) -> Button:
 	b.text = text
 	b.name = text.replace(" ", "")
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.custom_minimum_size.y = 22
 	b.pressed.connect(cb)
 	parent.add_child(b)
 	return b
 
 
+func _add_browser(parent: Control) -> void:
+	_browser = VBoxContainer.new()
+	_browser.add_theme_constant_override(&"separation", 5)
+	parent.add_child(_browser)
+	var create := HBoxContainer.new()
+	_browser.add_child(create)
+	_public = CheckButton.new()
+	_public.text = "List publicly"
+	_public.button_pressed = true
+	create.add_child(_public)
+	_host_btn = _button(create, "CREATE ROOM", _on_host)
+	TitleStyle.primary(_host_btn)
+
+	var join := HBoxContainer.new()
+	_browser.add_child(join)
+	_code_edit = LineEdit.new()
+	_code_edit.max_length = 6
+	_code_edit.placeholder_text = "6-character room code"
+	_code_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_code_edit.text_submitted.connect(func(_value: String) -> void: _on_join())
+	join.add_child(_code_edit)
+	_join_btn = _button(join, "JOIN CODE", _on_join)
+	_join_btn.size_flags_horizontal = Control.SIZE_FILL
+
+	var directory := HBoxContainer.new()
+	_browser.add_child(directory)
+	_directory_status = _label("Public rooms")
+	_directory_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	directory.add_child(_directory_status)
+	_button(directory, "REFRESH", _fetch_rooms).size_flags_horizontal = Control.SIZE_FILL
+	_rooms = ItemList.new()
+	_rooms.custom_minimum_size.y = 57
+	_rooms.item_activated.connect(func(_index: int) -> void: _join_selected())
+	_browser.add_child(_rooms)
+	_button(_browser, "JOIN SELECTED ROOM", _join_selected)
+	_request = HTTPRequest.new()
+	_request.timeout = 7.0
+	_request.body_size_limit = 32768
+	_request.request_completed.connect(_on_directory)
+	add_child(_request)
+	var refresh_timer := Timer.new()
+	refresh_timer.wait_time = 8.0
+	refresh_timer.autostart = true
+	refresh_timer.timeout.connect(_fetch_rooms)
+	add_child(refresh_timer)
+
+
+func _fetch_rooms() -> void:
+	if Net.is_online() or Net.room_connecting() or _request.get_http_client_status() != HTTPClient.STATUS_DISCONNECTED:
+		return
+	var service := Net.room_service_url()
+	if service.is_empty() or _request.request(service + "/rooms") != OK:
+		_directory_status.text = "Room service unavailable"
+
+
+func _on_directory(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	if not _browser.visible:
+		return
+	if result != HTTPRequest.RESULT_SUCCESS or response_code != 200:
+		_directory_status.text = "Room service unavailable"
+		return
+	var data: Variant = JSON.parse_string(body.get_string_from_utf8())
+	if not data is Dictionary or not data.get("rooms") is Array:
+		_directory_status.text = "Room service unavailable"
+		return
+	var selected := ""
+	if not _rooms.get_selected_items().is_empty():
+		selected = str(_rooms.get_item_metadata(_rooms.get_selected_items()[0]))
+	_rooms.clear()
+	for room in data.rooms:
+		if not room is Dictionary:
+			continue
+		var code := str(room.get("code", ""))
+		var mode := str(Net.MODE_NAMES.get(room.get("mode", ""), "Co-op Run"))
+		var location: Dictionary = GameManager.LOCATIONS.get(StringName(room.get("location", "")), {})
+		var index := _rooms.add_item("%s  /  %s  /  %s   %d/%d" % [
+			str(room.get("name", "Courier")).left(16), mode, location.get("name", ""),
+			int(room.get("count", 0)), int(room.get("capacity", 4))])
+		_rooms.set_item_metadata(index, code)
+		if code == selected:
+			_rooms.select(index)
+	_directory_status.text = "Public rooms (%d)" % _rooms.item_count if _rooms.item_count else "No public rooms open"
+
+
+func _set_name() -> void:
+	Net.my_name = _name_edit.text.strip_edges().left(16)
+	if Net.my_name.is_empty():
+		Net.my_name = "Courier"
+
+
 func _on_host() -> void:
-	Net.my_name = _name_edit.text.strip_edges() if _name_edit.text.strip_edges() != "" else "Host"
-	Net.host(int(_port_edit.value))
-	Net.set_setting("location", String(LOBBY_LOCATIONS[_dest.selected]))
-	Net.set_setting("mode", Net.MODES[maxi(_mode.selected, 0)])
-	Net.set_setting("pizza_enemy", "steal" if _pizza_rule.selected <= 0 else "reset")
+	if not Net.is_online() and not Net.room_connecting():
+		_set_name()
+		Net.create_room(_public.button_pressed, GameManager.selected_location)
 
 
 func _on_join() -> void:
-	Net.my_name = _name_edit.text.strip_edges() if _name_edit.text.strip_edges() != "" else "Handyman"
-	Net.join(_addr_edit.text.strip_edges(), int(_port_edit.value))
+	_join_code(_code_edit.text.strip_edges().to_upper())
+
+
+func _join_selected() -> void:
+	if _rooms.get_selected_items().is_empty():
+		_status.text = "Select a public room first."
+		return
+	_join_code(str(_rooms.get_item_metadata(_rooms.get_selected_items()[0])))
+
+
+func _join_code(code: String) -> void:
+	if Net.is_online() or Net.room_connecting():
+		return
+	var valid := code.length() == 6
+	for letter in code:
+		valid = valid and letter in "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+	if not valid:
+		_status.text = "Enter the six-character code shown in the room."
+		return
+	_set_name()
+	Net.join_room(code)
 
 
 func _refresh() -> void:
@@ -218,7 +331,7 @@ func _refresh() -> void:
 		var ready := ""
 		if versus:
 			ready = "   [color=#7fdc6a]READY[/color]" if Net.peer_ready(id) else "   [color=#b0a090]not ready[/color]"
-		lines.append("  %s%s · %s%s%s" % [team, Net.peer_name(id),
+		lines.append("  %s%s · %s%s%s" % [team, Net.peer_name(id).replace("[", "[lb]"),
 			GameManager.PLAYABLE_CHARACTERS[Net.peer_character(id)], "  (host)" if id == 1 else "", ready])
 	if Net.players.is_empty():
 		lines.append("  (not connected)")
@@ -231,8 +344,18 @@ func _refresh() -> void:
 			extra = "   ·   Secret rival ON"
 		lines.append("Mode: %s   ·   Map: %s%s" % [Net.MODE_NAMES[mode], loc.get("name", "?"), extra])
 	_roster.text = "\n".join(lines)
+	_roster.visible = online
+	_browser.visible = not online
+	_identity.visible = not online
+	_room_title.get_parent().visible = online
+	_room_title.text = "ROOM CODE   %s" % Net.room_code
 	_host_box.visible = Net.is_host()
 	_mode.select(Net.MODES.find(mode))
+	var destination := LOBBY_LOCATIONS.find(StringName(Net.settings.location))
+	if destination >= 0:
+		_dest.select(destination)
+	_pizza_rule.select(0 if Net.settings.pizza_enemy == "steal" else 1)
+	_rival.set_pressed_no_signal(Net.settings.rival)
 	_versus_box.visible = versus
 	_rival.visible = not versus
 	_team_row.visible = online and mode == "tdm"
@@ -241,6 +364,6 @@ func _refresh() -> void:
 		_ready_btn.set_pressed_no_signal(Net.peer_ready(Net.local_id()))
 	_start_btn.text = "START MATCH" if versus else "START RUN"
 	_start_btn.disabled = not Net.is_host() or (versus and not Net.all_ready())
-	_host_btn.disabled = online or not Net.can_host()
-	_join_btn.disabled = online
+	_host_btn.disabled = online or Net.room_connecting()
+	_join_btn.disabled = online or Net.room_connecting()
 	_leave_btn.disabled = not online

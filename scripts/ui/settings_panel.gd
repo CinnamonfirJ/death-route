@@ -8,7 +8,7 @@ func _ready() -> void:
 	add_theme_constant_override(&"separation", 4)
 	var title := Label.new()
 	title.text = "SETTINGS"
-	title.add_theme_color_override(&"font_color", Color(1, 0.85, 0.4))
+	title.add_theme_color_override(&"font_color", TitleStyle.AMBER)
 	add_child(title)
 	_toggle("Auto-aim", "auto_aim", "Snaps your aim to the zombie nearest your crosshair. Off = hardcore.")
 	_toggle("Auto-run", "auto_run", "Always sprint without holding Shift / RUN. Sprinting is noisier.")
@@ -20,6 +20,8 @@ func _ready() -> void:
 	lighting.item_selected.connect(func(i: int) -> void:
 		GameManager.set_setting("lighting_mode", "night" if i == 0 else "classic"))
 	add_child(lighting)
+	_slider("Room brightness", "room_brightness", 0.0, 1.0,
+		"Night mode only. Left is darker, right is brighter.")
 	_slider("Sound volume", "sfx_volume", 0.0, 1.0)
 	_slider("Screen shake", "screen_shake", 0.0, 1.5)
 	_toggle("Voice chat mic", "voice_enabled", "Lets nearby players hear you in online matches. Off by default.")
@@ -46,13 +48,13 @@ func _toggle(label: String, key: String, hint: String) -> void:
 	var h := Label.new()
 	h.text = hint
 	h.add_theme_font_size_override(&"font_size", 8)
-	h.add_theme_color_override(&"font_color", Color(0.7, 0.68, 0.62))
+	h.add_theme_color_override(&"font_color", TitleStyle.MUTED)
 	h.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	h.custom_minimum_size = Vector2(220, 0)
 	add_child(h)
 
 
-func _slider(label: String, key: String, lo: float, hi: float) -> void:
+func _slider(label: String, key: String, lo: float, hi: float, hint := "") -> void:
 	var row := HBoxContainer.new()
 	var l := Label.new()
 	l.text = label
@@ -60,6 +62,7 @@ func _slider(label: String, key: String, lo: float, hi: float) -> void:
 	row.add_child(l)
 	var s := HSlider.new()
 	s.name = key
+	s.tooltip_text = hint
 	s.min_value = lo
 	s.max_value = hi
 	s.step = 0.05

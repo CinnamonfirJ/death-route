@@ -1,6 +1,6 @@
 # Versus multiplayer: Team Deathmatch and Free For All
 
-The co-op run is still there. The lobby (Garage > CO-OP) now has a **Mode** picker:
+Open **Garage → Online Rooms** to create a room, choose a public room, or join a private room by its six-character code. The host can choose one of three modes:
 
 | Mode | Who's against who |
 |---|---|
@@ -9,7 +9,7 @@ The co-op run is still there. The lobby (Garage > CO-OP) now has a **Mode** pick
 | Free For All | Everyone for themselves |
 
 Up to 4 players. The host picks the mode, the map (Hospital, Camp, Route 9) and the
-**Enemy pizza** rule. Everyone else presses **READY**; the host's **START MATCH** unlocks once
+**Enemy pizza** rule. In versus modes everyone else presses **READY**; the host's **START MATCH** unlocks once
 everyone is ready.
 
 ## How a match plays
@@ -85,8 +85,8 @@ The host is the referee (`scripts/autoload/match_state.gd`):
 1. In the Godot editor: **Debug > Customize Run Instances...**, tick **Enable Multiple
    Instances**, set **2**, then press **Play** (F5). Two game windows open. Or export the
    Windows build and start the .exe twice.
-2. Window 1: Garage > **CO-OP** > set Mode to **Team Deathmatch** > **Host**.
-3. Window 2: Garage > **CO-OP** > Host IP `127.0.0.1` > **Join** > **Join BLUE** > **READY**.
+2. Window 1: Garage → **Online Rooms** → **Create Room**. Set Mode to **Team Deathmatch**.
+3. Window 2: Open **Online Rooms** and select the first window's room, or enter its code. Press **Join BLUE** and **READY**.
 4. Window 1: **START MATCH**. You spawn on opposite sides. Walk to each other, press **V** for
    the knife and click to stab. Guns won't hurt each other.
 

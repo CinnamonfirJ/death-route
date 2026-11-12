@@ -23,15 +23,17 @@ color = Color(0.055, 0.062, 0.079, 1)
 
 [node name="Margin" type="MarginContainer" parent="."]
 layout_mode = 1
-anchors_preset = 15
+anchor_top = 0.5
 anchor_right = 1.0
-anchor_bottom = 1.0
+anchor_bottom = 0.5
+offset_top = -180.0
+offset_bottom = 180.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 14
-theme_override_constants/margin_top = 8
-theme_override_constants/margin_right = 14
-theme_override_constants/margin_bottom = 6
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 15
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 15
 
 [node name="VBox" type="VBoxContainer" parent="Margin"]
 layout_mode = 2
@@ -44,11 +46,11 @@ theme_override_constants/separation = 8
 [node name="Title" type="Label" parent="Margin/VBox/Header"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(1, 0.85, 0.4, 1)
+theme_override_colors/font_color = Color(1, 0.776, 0.533, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 18
-text = "THE GARAGE"
+text = "GARAGE"
 
 [node name="ScrapIcon" type="TextureRect" parent="Margin/VBox/Header"]
 unique_name_in_owner = true
@@ -60,14 +62,14 @@ stretch_mode = 5
 [node name="Scrap" type="Label" parent="Margin/VBox/Header"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.85, 0.4, 1)
+theme_override_colors/font_color = Color(1, 0.776, 0.533, 1)
 theme_override_font_sizes/font_size = 14
 text = "0 scrap"
 
 [node name="LastRun" type="Label" parent="Margin/VBox"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.75, 0.72, 0.65, 1)
+theme_override_colors/font_color = Color(0.71, 0.70, 0.80, 1)
 theme_override_font_sizes/font_size = 9
 
 [node name="Body" type="HBoxContainer" parent="Margin/VBox"]
@@ -84,7 +86,7 @@ unique_name_in_owner = true
 layout_mode = 2
 
 [node name="SidePanel" type="PanelContainer" parent="Margin/VBox/Body"]
-custom_minimum_size = Vector2(228, 0)
+custom_minimum_size = Vector2(256, 0)
 layout_mode = 2
 
 [node name="Side" type="VBoxContainer" parent="Margin/VBox/Body/SidePanel"]
@@ -98,7 +100,7 @@ alignment = 0
 
 [node name="CharacterLabel" type="Label" parent="Margin/VBox/Body/SidePanel/Side/CharacterRow"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.85, 0.4, 1)
+theme_override_colors/font_color = Color(1, 0.776, 0.533, 1)
 theme_override_font_sizes/font_size = 9
 text = "CHARACTER"
 
@@ -111,7 +113,7 @@ script = ExtResource("2_character")
 
 [node name="LoadoutLabel" type="Label" parent="Margin/VBox/Body/SidePanel/Side"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.85, 0.4, 1)
+theme_override_colors/font_color = Color(1, 0.776, 0.533, 1)
 text = "LOADOUT"
 
 [node name="LoadoutWeapons" type="HBoxContainer" parent="Margin/VBox/Body/SidePanel/Side"]
@@ -124,7 +126,7 @@ layout_mode = 2
 [node name="CarSprite" type="TextureRect" parent="Margin/VBox/Body/SidePanel/Side/CarRow"]
 unique_name_in_owner = true
 texture_filter = 1
-custom_minimum_size = Vector2(28, 34)
+custom_minimum_size = Vector2(40, 42)
 layout_mode = 2
 expand_mode = 1
 stretch_mode = 5
@@ -137,7 +139,7 @@ theme_override_font_sizes/font_size = 9
 
 [node name="DestLabel" type="Label" parent="Margin/VBox/Body/SidePanel/Side"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.85, 0.4, 1)
+theme_override_colors/font_color = Color(1, 0.776, 0.533, 1)
 text = "DESTINATION"
 
 [node name="Destinations" type="HBoxContainer" parent="Margin/VBox/Body/SidePanel/Side"]
@@ -148,7 +150,7 @@ layout_mode = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.75, 0.72, 0.65, 1)
+theme_override_colors/font_color = Color(0.71, 0.70, 0.80, 1)
 theme_override_font_sizes/font_size = 8
 autowrap_mode = 2
 
@@ -165,24 +167,24 @@ custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 12
-text = "START RUN"
+text = "SOLO RUN"
 
 [node name="CoopButton" type="Button" parent="Margin/VBox/Body/SidePanel/Side/StartRow"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
 theme_override_font_sizes/font_size = 10
-text = "CO-OP"
+text = "ONLINE ROOMS"
 
 [node name="Lifetime" type="Label" parent="Margin/VBox"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.7, 0.68, 0.62, 1)
+theme_override_colors/font_color = Color(0.71, 0.70, 0.80, 1)
 theme_override_font_sizes/font_size = 8
 
 [node name="Credits" type="Label" parent="Margin/VBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.52, 0.48, 1)
+theme_override_colors/font_color = Color(0.71, 0.70, 0.80, 1)
 theme_override_font_sizes/font_size = 7
-text = "Cars: \"Racing Cars by Ibrahim Smati (itch.io/@ibrahim-smati)\", CC BY 4.0  ·  Characters, world & UI: Zombie Pack by Aymen B (@PixRogueKnight)"
+text = "Racing Cars: Ibrahim Smati (itch.io/@ibrahim-smati), CC BY 4.0  /  Zombie Pack: Aymen B (@PixRogueKnight)"
 horizontal_alignment = 1

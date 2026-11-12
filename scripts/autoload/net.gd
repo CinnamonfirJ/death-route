@@ -2,8 +2,7 @@ extends Node
 ## Multiplayer: lobby, roster, match start, and the helpers gameplay code uses so
 ## it works the same offline and online.
 ##
-## Transport is WebSocket so PC, Android and Web all interoperate. A browser can
-## join but can't host (browsers can't open listening sockets).
+## Online rooms use outbound WebSockets on every platform, including browsers.
 ##
 ## Authority model:
 ##   host (peer 1)  zombies, jobs, pickups, noise director, car respawns, run end
@@ -17,6 +16,7 @@ signal status_changed(text: String)
 signal all_peers_ready
 signal local_player_spawned(player: Node)
 
+const RoomPeer := preload("res://scripts/net/room_peer.gd")
 const DEFAULT_PORT := 7777
 const MAX_PLAYERS := 4
 ## Seconds between batched noise reports from clients to the host.
@@ -31,6 +31,9 @@ const MODE_NAMES := {"coop": "Co-op Run", "tdm": "Team Deathmatch", "ffa": "Free
 var role := "crew"  # "crew" or "rival" (only the rival's own machine knows)
 var my_name := "Handyman"
 var in_match := false
+var room_code := ""
+var room_public := false
+var room_error := ""
 
 var _spawner: MultiplayerSpawner
 var _ready_peers := {}
@@ -125,8 +128,16 @@ func peer_character(id: int) -> StringName:
 	return players.get(id, {}).get("character", GameManager.DEFAULT_CHARACTER)
 
 
-func can_host() -> bool:
-	return not OS.has_feature("web")
+func room_service_url() -> String:
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--rooms-url="):
+			return arg.trim_prefix("--rooms-url=").trim_suffix("/")
+	return str(ProjectSettings.get_setting("dead_route/network/room_service", "")).trim_suffix("/")
+
+
+func room_connecting() -> bool:
+	return multiplayer.multiplayer_peer is RoomPeer \
+		and multiplayer.multiplayer_peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTING
 
 
 # ---------- Players in the world ----------
@@ -229,6 +240,45 @@ func _spawn_from_data(data: Dictionary) -> Node:
 
 # ---------- Lobby ----------
 
+func create_room(public_room: bool, location: StringName) -> Error:
+	leave()
+	room_public = public_room
+	settings = {"location": String(location), "rival": false, "mode": "coop", "pizza_enemy": "steal"}
+	return _open_room("create=1&public=%d&name=%s&location=%s" % [
+		int(public_room), my_name.uri_encode(), String(location).uri_encode()])
+
+
+func join_room(code: String) -> Error:
+	leave()
+	return _open_room("code=" + code.uri_encode())
+
+
+func _open_room(query: String) -> Error:
+	var url := room_service_url()
+	if url.is_empty():
+		status_changed.emit("Online rooms are unavailable in this build.")
+		return ERR_UNCONFIGURED
+	url = url.replace("https://", "wss://").replace("http://", "ws://")
+	var peer := RoomPeer.new()
+	var err := peer.open(url + "/play?" + query)
+	if err != OK:
+		status_changed.emit("Couldn't reach the room service.")
+		return err
+	peer.failed.connect(func(reason: String) -> void: room_error = reason)
+	peer.welcomed.connect(func(code: String) -> void:
+		room_code = code
+		if is_host():
+			players = {1: {"name": my_name, "character": GameManager.selected_character,
+				"team": 0, "ready": true}}
+			status_changed.emit("Room is open. Share code %s with friends." % code)
+		roster_changed.emit())
+	multiplayer.multiplayer_peer = peer
+	status_changed.emit("Connecting to the room service…")
+	roster_changed.emit()
+	return OK
+
+
+## Direct connection is retained for local integration tests and tools.
 func host(port := DEFAULT_PORT) -> Error:
 	leave()
 	var peer := WebSocketMultiplayerPeer.new()
@@ -245,8 +295,7 @@ func host(port := DEFAULT_PORT) -> Error:
 
 func join(address: String, port := DEFAULT_PORT) -> Error:
 	leave()
-	var codes: Dictionary = ProjectSettings.get_setting("dead_route/network/room_codes", {})
-	address = str(codes.get(address.strip_edges().to_upper(), address.strip_edges()))
+	address = address.strip_edges()
 	if address.is_empty():
 		status_changed.emit("Enter a room code or host address.")
 		return ERR_INVALID_PARAMETER
@@ -274,6 +323,9 @@ func leave() -> void:
 		multiplayer.multiplayer_peer.close()
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
 	players.clear()
+	room_code = ""
+	room_public = false
+	room_error = ""
 	role = "crew"
 	in_match = false
 	_spawner = null
@@ -286,6 +338,9 @@ func set_setting(key: String, value: Variant) -> void:
 	if not is_host():
 		return
 	settings[key] = value
+	var room_peer := multiplayer.multiplayer_peer as RoomPeer
+	if room_peer:
+		room_peer.advertise(settings)
 	_rpc_roster.rpc(players, settings)
 	roster_changed.emit()
 
@@ -316,8 +371,9 @@ func _on_connected() -> void:
 
 
 func _on_connection_failed() -> void:
+	var reason := room_error
 	leave()
-	status_changed.emit("Connection failed.")
+	status_changed.emit(reason if not reason.is_empty() else "Could not connect to the room service. Try again.")
 
 
 func _on_server_disconnected() -> void:
@@ -445,6 +501,7 @@ func start_match() -> void:
 	_downed.clear()
 	_rival_exposed = false
 	_rival_id = 0
+	multiplayer.multiplayer_peer.refuse_new_connections = true
 	if settings.rival and players.size() >= 2 and not is_versus():
 		_rival_id = players.keys().pick_random()
 	for id in players:

@@ -14,6 +14,9 @@ concurrency:
 
 env:
   GODOT_VERSION: 4.7.2
+  WRANGLER_VERSION: 4.161.0
+  CLOUDFLARE_ACCOUNT_ID: d088a4356754db5a5c087e01f50af5fc
+  WRANGLER_SEND_METRICS: 'false'
 
 jobs:
   web:
@@ -24,6 +27,34 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
+
+      - name: Set up Node.js 24 for Wrangler
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Configure online rooms
+        id: room_service
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_ROOMS_API_TOKEN }}
+          ROOM_SERVICE_URL: ${{ vars.DEAD_ROUTE_ROOM_SERVICE }}
+          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/room-service-deploy.ndjson
+        run: |
+          set -euo pipefail
+          if [ -n "$CLOUDFLARE_API_TOKEN" ]; then
+            npx --yes "wrangler@$WRANGLER_VERSION" deploy --config online-rooms/wrangler.toml
+            service_url="$(python3 tools/configure_room_service.py --wrangler-output "$WRANGLER_OUTPUT_FILE_PATH")"
+          elif [ -n "$ROOM_SERVICE_URL" ]; then
+            service_url="$(python3 tools/configure_room_service.py --url "$ROOM_SERVICE_URL")"
+          else
+            echo "::warning::Online rooms are unavailable. Configure CLOUDFLARE_ROOMS_API_TOKEN or DEAD_ROUTE_ROOM_SERVICE to publish this build."
+            exit 0
+          fi
+          curl --fail --silent --show-error --retry 3 --retry-all-errors --max-time 15 "$service_url/rooms" |
+            python3 -c 'import json, sys; sys.exit(0 if isinstance(json.load(sys.stdin).get("rooms"), list) else 1)'
+          echo 'configured=true' >> "$GITHUB_OUTPUT"
 
       - name: Install Godot and its matching Web template
         shell: bash
@@ -68,20 +99,11 @@ jobs:
             echo "::warning::Build complete. Add the CLOUDFLARE_API_TOKEN Actions secret to enable deployment."
           fi
 
-      - name: Set up Node.js 24 for Wrangler
-        if: steps.credentials.outputs.configured == 'true'
-        uses: actions/setup-node@v6
-        with:
-          node-version: '24'
-          package-manager-cache: false
-
       - name: Publish to dead-route.pages.dev
-        if: steps.credentials.outputs.configured == 'true'
+        if: steps.credentials.outputs.configured == 'true' && steps.room_service.outputs.configured == 'true'
         shell: bash
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: d088a4356754db5a5c087e01f50af5fc
-          WRANGLER_SEND_METRICS: 'false'
         run: |
           set -euo pipefail
           project_url="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/dead-route"
@@ -99,4 +121,4 @@ jobs:
               exit 1
               ;;
           esac
-          npx --yes wrangler@4.161.0 pages deploy build/pages --project-name=dead-route --branch=main
+          npx --yes "wrangler@$WRANGLER_VERSION" pages deploy build/pages --project-name=dead-route --branch=main --commit-dirty=true

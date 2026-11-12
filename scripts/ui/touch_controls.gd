@@ -300,17 +300,17 @@ func _draw() -> void:
 	var font := get_theme_default_font()
 	for b in buttons():
 		var pressed: bool = held_actions.has(b.action)
-		draw_circle(b.pos, b.r, Color(0.1, 0.1, 0.12, 0.55 if pressed else 0.35))
-		draw_arc(b.pos, b.r, 0.0, TAU, 32, Color(1, 0.85, 0.4, 0.9 if pressed else 0.55), 1.5)
+		draw_circle(b.pos, b.r, Color(TitleStyle.INK, 0.65 if pressed else 0.48))
+		draw_arc(b.pos, b.r, 0.0, TAU, 32, Color(TitleStyle.AMBER, 0.9 if pressed else 0.55), 1.5)
 		draw_string(font, b.pos + Vector2(-b.r, 3), b.label, HORIZONTAL_ALIGNMENT_CENTER, b.r * 2.0, 7,
-			Color(1, 1, 1, 0.95 if pressed else 0.7))
+			Color(TitleStyle.CREAM, 0.95 if pressed else 0.7))
 
 
 func _draw_stick(origin: Vector2, vec: Vector2, live: bool, label: String) -> void:
 	var a := 0.45 if live else 0.18
-	draw_circle(origin, STICK_RADIUS, Color(0.1, 0.1, 0.12, a * 0.6))
+	draw_circle(origin, STICK_RADIUS, Color(TitleStyle.INK, a * 0.6))
 	draw_arc(origin, STICK_RADIUS, 0.0, TAU, 40, Color(1, 1, 1, a), 1.5)
-	var knob_color := Color(1, 0.85, 0.4, a + 0.2)
+	var knob_color := Color(TitleStyle.AMBER, a + 0.2)
 	draw_circle(origin + vec * STICK_RADIUS, KNOB_RADIUS, knob_color)
 	if not live:
 		draw_string(get_theme_default_font(), origin + Vector2(-STICK_RADIUS, STICK_RADIUS + 10), label,

@@ -4,6 +4,8 @@ extends Node2D
 
 const BEAM_TEXTURE := "res://assets/effects/flashlight_cookie.png"
 @export var night_ambient := Color(0.36, 0.39, 0.49)
+@export_range(0.0, 1.0) var brightness_darkening := 0.42
+@export_range(0.0, 1.0) var brightness_lightening := 0.58
 @export var interior_tint := Color(0.83, 0.85, 0.94)
 @export var interior_glow_radius := 120.0
 @export var exterior_glow_radius := 166.0
@@ -94,7 +96,13 @@ func configure(level: Node2D) -> void:
 
 func _apply_mode() -> void:
 	var night := is_night()
-	_ambient.color = night_ambient if night else Color.WHITE
+	var brightness := clampf(float(GameManager.get_setting("room_brightness")), 0.0, 1.0)
+	var ambient := night_ambient
+	if brightness < 0.5:
+		ambient = ambient.darkened((1.0 - brightness * 2.0) * brightness_darkening)
+	else:
+		ambient = ambient.lightened((brightness * 2.0 - 1.0) * brightness_lightening)
+	_ambient.color = ambient if night else Color.WHITE
 	if _floor:
 		_floor.self_modulate = _floor_tint * interior_tint if night else _floor_tint
 	_fixtures.visible = night
