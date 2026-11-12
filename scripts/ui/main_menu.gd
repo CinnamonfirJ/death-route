@@ -48,6 +48,12 @@ func _ready() -> void:
 	stack.add_child(secondary)
 	_wallet = _button(secondary, "SIGN IN WITH GOOGLE", _show_wallet)
 	_button(secondary, "SETTINGS", _show_settings)
+	if FullscreenButton.available():
+		var full := FullscreenButton.new()
+		full.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		if _mobile:
+			TouchLayout.button(full)
+		secondary.add_child(full)
 	get_viewport().size_changed.connect(_layout)
 	_layout()
 	WalletSession.changed.connect(_refresh_wallet)

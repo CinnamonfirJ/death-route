@@ -3,6 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#100e1e">
   <title>$GODOT_PROJECT_NAME</title>
   <style>
     * { box-sizing: border-box; }
@@ -15,6 +18,13 @@
         max(16px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
       background: radial-gradient(ellipse at center, #242039 0%, #100e1e 70%); }
     #start[hidden] { display: none; }
+    #launch-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; }
+    #fullscreen { background: #1a192e; }
+    #status:empty, #fullscreen-status:empty { display: none; }
+    #fullscreen-status { max-width: 32ch; margin: 0 auto; color: #ddd0df; line-height: 1.4; }
+    #fullscreen-notice { position: fixed; z-index: 2; top: max(10px, env(safe-area-inset-top));
+      left: 50%; transform: translateX(-50%); width: max-content; max-width: 85%;
+      padding: 10px 14px; border: 1px solid #e38b56; background: #1a192e; text-align: center; }
     h1 { margin: 0; font-size: clamp(28px, 6vw, 52px); text-transform: uppercase; letter-spacing: .10em; }
     button { min-height: 48px; padding: 8px 26px; color: #fff2df; background: #362238;
       border: 1px solid #e38b56; font: 600 17px system-ui, sans-serif; }
@@ -33,29 +43,77 @@
   <canvas id="canvas" tabindex="0">This game needs WebGL 2.</canvas>
   <div id="insets"></div>
   <aside id="rotate">Rotate your phone for landscape play</aside>
+  <div id="fullscreen-notice" role="status" hidden></div>
   <main id="start">
     <h1>Dead Route</h1>
-    <button id="launch" disabled>Loading…</button>
+    <div id="launch-actions">
+      <button id="launch" type="button" disabled>Loading…</button>
+      <button id="fullscreen" type="button" aria-pressed="false" hidden>Fullscreen</button>
+    </div>
     <div id="status" role="status"></div>
+    <p id="fullscreen-status" role="status"></p>
   </main>
   <script src="$GODOT_URL"></script>
   <script>
     const insets = document.getElementById("insets");
+    const canvas = document.getElementById("canvas");
     window.deadRouteInsets = () => {
       const style = getComputedStyle(insets);
+      const width = Math.max(canvas.clientWidth, 1);
+      const height = Math.max(canvas.clientHeight, 1);
       return JSON.stringify([
-        parseFloat(style.paddingLeft) / innerWidth, parseFloat(style.paddingTop) / innerHeight,
-        parseFloat(style.paddingRight) / innerWidth, parseFloat(style.paddingBottom) / innerHeight,
+        parseFloat(style.paddingLeft) / width, parseFloat(style.paddingTop) / height,
+        parseFloat(style.paddingRight) / width, parseFloat(style.paddingBottom) / height,
       ]);
     };
     const config = $GODOT_CONFIG;
-    const canvas = document.getElementById("canvas");
-    window.deadRouteToggleFullscreen = () => {
-      const change = document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
-      change.catch(() => {});
-    };
     const launch = document.getElementById("launch");
     const status = document.getElementById("status");
+    const start = document.getElementById("start");
+    const fullscreen = document.getElementById("fullscreen");
+    const fullscreenStatus = document.getElementById("fullscreen-status");
+    const fullscreenNotice = document.getElementById("fullscreen-notice");
+    const appleMobile = /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+    const root = document.documentElement;
+    const canFullscreen = Boolean(document.fullscreenEnabled && root.requestFullscreen);
+    let fullscreenNoticeTimer;
+
+    function updateFullscreen() {
+      const active = Boolean(document.fullscreenElement);
+      fullscreen.textContent = active ? "Exit fullscreen" : "Fullscreen";
+      fullscreen.setAttribute("aria-pressed", String(active));
+    }
+    window.deadRouteFullscreenAvailable = () => canFullscreen;
+    window.deadRouteIsFullscreen = () => Boolean(document.fullscreenElement);
+    window.deadRouteToggleFullscreen = async () => {
+      if (!canFullscreen) return;
+      try {
+        if (document.fullscreenElement) await document.exitFullscreen();
+        else await root.requestFullscreen({ navigationUI: "hide" });
+        fullscreenStatus.textContent = "";
+        fullscreenNotice.hidden = true;
+        if (start.hidden) canvas.focus();
+      } catch {
+        const message = "Fullscreen is blocked here. Open the game directly in your browser and try again.";
+        if (start.hidden) {
+          fullscreenNotice.textContent = message;
+          fullscreenNotice.hidden = false;
+          clearTimeout(fullscreenNoticeTimer);
+          fullscreenNoticeTimer = setTimeout(() => { fullscreenNotice.hidden = true; }, 5000);
+        } else {
+          fullscreenStatus.textContent = message;
+        }
+      }
+    };
+    document.addEventListener("fullscreenchange", updateFullscreen);
+    fullscreen.hidden = !canFullscreen;
+    fullscreen.addEventListener("click", window.deadRouteToggleFullscreen);
+    if (!canFullscreen && appleMobile && !standalone) {
+      fullscreenStatus.textContent = "For a larger view on iPhone, use Safari’s Share menu → Add to Home Screen → Open as Web App.";
+    }
+    updateFullscreen();
     const engine = new Engine({ ...config, canvas });
     const pack = config.executable + ".pck";
     const failed = () => {
@@ -71,7 +129,7 @@
       launch.onclick = () => {
         launch.disabled = true;
         engine.start({ args: ["--main-pack", pack, ...(config.args || [])] }).then(() => {
-          document.getElementById("start").hidden = true;
+          start.hidden = true;
           canvas.focus();
         }).catch(failed);
       };

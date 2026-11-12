@@ -66,6 +66,7 @@ For a local test, run **npx --yes wrangler@4.161.0 dev --config online-rooms/wra
 5. **Mobile.** Launch in landscape on iPhone Safari and Android Chrome. Check the safe edges, sound, and the **Objectives** drawer. Move with the left thumb and drag the right stick past the ring to fire. Release it to stop. Switch to **Settings → Touch shooting → Advanced** to use a separate Fire button. Check reload, use, sprint, light, swap, and the car's **Shove**. Create a room on mobile and join from desktop.
 6. **Account.** Follow the owner, nonowner and guest checks in [AUTH_SETUP.md](AUTH_SETUP.md).
 7. **Release.** Open the itch link as an invited tester. Launch the uploaded browser ZIP and join a room by code and another from the public list.
+8. **Fullscreen.** On the web launcher, tap **Fullscreen** before **Tap to play**. On the title screen or in Settings, toggle fullscreen again and check that the canvas, HUD, and thumb controls resize. If iPhone Safari omits the fullscreen button, open the game from the Home Screen as a web app.
 
 ## Rebuilding
 

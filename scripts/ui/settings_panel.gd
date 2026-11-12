@@ -10,11 +10,9 @@ func _ready() -> void:
 	title.text = "SETTINGS"
 	title.add_theme_color_override(&"font_color", TitleStyle.AMBER)
 	add_child(title)
-	if OS.has_feature("web") and TouchLayout.enabled() and bool(JavaScriptBridge.eval("document.fullscreenEnabled", true)):
-		var full := Button.new()
-		full.text = "Toggle fullscreen"
+	if FullscreenButton.available():
+		var full := FullscreenButton.new()
 		TouchLayout.button(full)
-		full.pressed.connect(func() -> void: JavaScriptBridge.eval("window.deadRouteToggleFullscreen?.()", true))
 		add_child(full)
 	var touch_mode := OptionButton.new()
 	touch_mode.name = "TouchShooting"
