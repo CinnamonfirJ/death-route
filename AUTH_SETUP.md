@@ -1,6 +1,6 @@
 # Dead Route sign-in setup
 
-Players select **Sign in with Google**, confirm the game code, and return to play. Guest play is available from the title and account screens. The bridge provisions a sponsored NEAR testnet account in the background after Google verifies the player, and checks shotgun access when the player opens the Garage.
+On the web, players select **Sign in with Google** and choose an account in Google's account picker. The standalone desktop build uses a pairing code to link the browser to the game. Guest play is available from the title and account screens. The bridge provisions a sponsored NEAR testnet account in the background after Google verifies the player, and checks shotgun access in the Garage.
 
 ## Google Cloud
 

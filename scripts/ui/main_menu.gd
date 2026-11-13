@@ -46,7 +46,7 @@ func _ready() -> void:
 	var secondary := HBoxContainer.new()
 	secondary.add_theme_constant_override(&"separation", 6)
 	stack.add_child(secondary)
-	_account = _button(secondary, "SIGN IN WITH GOOGLE", _show_account)
+	_account = _button(secondary, "SIGN IN WITH GOOGLE", _account_pressed)
 	_button(secondary, "SETTINGS", _show_settings)
 	if FullscreenButton.available():
 		var full := FullscreenButton.new()
@@ -94,6 +94,12 @@ func _show_earn() -> void:
 	_close_button()
 
 
+func _account_pressed() -> void:
+	_show_account()
+	if OS.has_feature("web") and not WalletSession.signed_in and not WalletSession.busy:
+		WalletSession.sign_in()
+
+
 func _show_account() -> void:
 	_open("ACCOUNT")
 	_status = _copy("")
@@ -123,7 +129,7 @@ func _refresh_account() -> void:
 			_button(_account_actions, "OPEN SIGN-IN PAGE", WalletSession.open_browser, true)
 		_button(_account_actions, "CANCEL SIGN-IN", WalletSession.cancel_sign_in)
 	elif WalletSession.signed_in:
-		_status.text = "Signed in with Google."
+		_status.text = WalletSession.message if not WalletSession.message.is_empty() else "Signed in with Google."
 		_button(_account_actions, "PLAY", GameManager.goto_garage, true)
 		_button(_account_actions, "SIGN OUT", WalletSession.sign_out)
 	else:

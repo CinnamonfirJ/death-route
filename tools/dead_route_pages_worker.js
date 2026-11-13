@@ -1,5 +1,5 @@
 const signInPaths = new Set([
-  "/healthz", "/signin", "/oauth/callback",
+  "/healthz", "/signin", "/signin/web", "/oauth/callback", "/api/web/session", "/api/web/logout",
   "/api/device/start", "/api/device/poll", "/api/entitlement",
 ]);
 

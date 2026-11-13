@@ -61,6 +61,16 @@
   <script>
     const insets = document.getElementById("insets");
     const canvas = document.getElementById("canvas");
+    let googleSignIn;
+    window.deadRouteOpenGoogleSignIn = (url) => {
+      googleSignIn = window.open(url + "?popup=1", "dead-route-google", "popup,width=520,height=680");
+      if (!googleSignIn) window.location.assign(url);
+    };
+    window.deadRouteCloseGoogleSignIn = () => {
+      if (googleSignIn && !googleSignIn.closed) googleSignIn.close();
+      googleSignIn = null;
+      canvas.focus();
+    };
     window.deadRouteInsets = () => {
       const style = getComputedStyle(insets);
       const width = Math.max(canvas.clientWidth, 1);

@@ -96,6 +96,7 @@ export function createHandler({ flows = new Map(), states = new Map(), sessions 
     flow.result = { signed_in: true, session, shotgun_owned: false };
     flows.set(flow.id, flow);
     if (provisioningReady) refreshItems(session, identity);
+    return session;
   }
 
   function refreshItems(session, identity) {
@@ -146,9 +147,25 @@ export function createHandler({ flows = new Map(), states = new Map(), sessions 
           (payload.azp !== undefined && payload.azp !== clientId)) {
         throw new Error("Invalid Google login");
       }
-      finishAccount(flow, payload.sub);
+      const session = finishAccount(flow, payload.sub);
+      if (flow.web) {
+        removeFlow(flow);
+        res.setHeader("Set-Cookie", webSessionCookie(session, sessionLifetime / 1000));
+        if (!flow.popup) {
+          res.writeHead(303, { Location: "/" });
+          return res.end();
+        }
+        const nonce = randomToken();
+        res.setHeader("Content-Security-Policy", `default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}'; frame-ancestors 'none'`);
+        return page(res, 200, `<p>You're signed in. You can close this window and return to the game.</p>
+          <script nonce="${nonce}">window.close()</script>`);
+      }
       page(res, 200, "<p>Google sign-in is complete. Return to Dead Route.</p>");
     } catch {
+      if (flow.web) {
+        removeFlow(flow);
+        return page(res, 400, '<p>Google sign-in was cancelled or could not be completed.</p><p><a href="/">Return to Dead Route</a></p>');
+      }
       flow.error = "Google sign-in could not be completed. Try again or play as a guest.";
       if (activeFlow(flow.id)) flows.set(flow.id, flow);
       page(res, 502, "<p>Google sign-in could not be completed. Return to Dead Route to retry.</p>");
@@ -160,10 +177,53 @@ export function createHandler({ flows = new Map(), states = new Map(), sessions 
     return `dr_signin=${value}; Max-Age=${age}; Path=/oauth/callback; HttpOnly; SameSite=Lax${secure}`;
   }
 
+  function webSessionCookie(value, age) {
+    const secure = publicUrl.protocol === "https:" ? "; Secure" : "";
+    return `dr_session=${value}; Max-Age=${age}; Path=/api/web/; HttpOnly; SameSite=Strict${secure}`;
+  }
+
+  function authorizeGoogle(res, flow) {
+    flow.state = randomToken();
+    flow.nonce = randomToken();
+    flow.verifier = randomToken();
+    flow.browser = randomToken();
+    states.set(flow.state, flow.id);
+    flows.set(flow.id, flow);
+    const authorize = new URL(authorizationEndpoint);
+    authorize.search = new URLSearchParams({
+      client_id: clientId, response_type: "code", scope: "openid", redirect_uri: callback,
+      state: flow.state, nonce: flow.nonce, prompt: "select_account",
+      code_challenge: hash(flow.verifier).digest("base64url"), code_challenge_method: "S256",
+    });
+    res.writeHead(303, { Location: authorize.href, "Set-Cookie": pairingCookie(flow.browser, 300) });
+    return res.end();
+  }
+
   async function route(req, res) {
     const url = new URL(req.url, publicUrl);
     if (req.method === "GET" && url.pathname === "/healthz") {
       return json(res, 200, { service: "dead-route-sign-in", google_configured: googleReady, provisioning_configured: provisioningReady });
+    }
+    if (req.method === "GET" && url.pathname === "/signin/web") {
+      if (!googleReady) return page(res, 503, '<p>Google sign-in is unavailable. <a href="/">Return to the game</a>.</p>');
+      for (const flow of flows.values()) activeFlow(flow.id);
+      if (flows.size >= 250) return page(res, 429, '<p>Sign-in is busy. <a href="/">Return to the game</a> and try again.</p>');
+      return authorizeGoogle(res, {
+        id: randomToken(), web: true, popup: url.searchParams.get("popup") === "1", expires: Date.now() + lifetime,
+      });
+    }
+    if (req.method === "POST" && (url.pathname === "/api/web/session" || url.pathname === "/api/web/logout")) {
+      if (req.headers.origin !== publicUrl.origin) return json(res, 403, { error: "Open sign-in from Dead Route." });
+      const session = (req.headers.cookie || "").match(/(?:^|; *)dr_session=([^;]+)/)?.[1];
+      if (url.pathname === "/api/web/logout") {
+        if (session) sessions.delete(session);
+        res.setHeader("Set-Cookie", webSessionCookie("", 0));
+        return json(res, 200, { signed_in: false });
+      }
+      if (!session || !(sessions.get(session)?.expires > Date.now())) {
+        return json(res, 200, { signed_in: false });
+      }
+      return json(res, 200, { signed_in: true, session });
     }
     if (req.method === "POST" && url.pathname === "/api/device/start") {
       const { method } = await readBody(req);
@@ -224,21 +284,7 @@ export function createHandler({ flows = new Map(), states = new Map(), sessions 
         else flows.set(flow.id, flow);
         return page(res, 400, "<p>The code did not match. Go back and check the code in Dead Route.</p>");
       }
-      flow.state = randomToken();
-      flow.nonce = randomToken();
-      flow.verifier = randomToken();
-      flow.browser = randomToken();
-      states.set(flow.state, flow.id);
-      flows.set(flow.id, flow);
-      const cookie = pairingCookie(flow.browser, 300);
-      const authorize = new URL(authorizationEndpoint);
-      authorize.search = new URLSearchParams({
-        client_id: clientId, response_type: "code", scope: "openid", redirect_uri: callback,
-        state: flow.state, nonce: flow.nonce,
-        code_challenge: hash(flow.verifier).digest("base64url"), code_challenge_method: "S256",
-      });
-      res.writeHead(303, { Location: authorize.href, "Set-Cookie": cookie });
-      return res.end();
+      return authorizeGoogle(res, flow);
     }
     if (req.method === "GET" && url.pathname === "/oauth/callback") return finishLogin(req, res, url);
     return json(res, 404, { error: "Page unavailable." });
