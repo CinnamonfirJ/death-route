@@ -77,8 +77,25 @@ export function createChain(env = process.env) {
         const to = resolveParty(row, row.to);
         if (!from || !to) return { status: "ledger-only", note: "guest courier, no NEAR account" };
         for (const id of [from, to]) if (id.endsWith(`.${relayerId}`)) await ensureAccount(id);
-        const tx = await call("relayed_transfer", { intent_id: row.intent || row.id, sender_id: from, receiver_id: to,
+        const intent = row.intent || row.id;
+        if (row.from.startsWith("merchant:")) {
+          const operator = await relayer();
+          const view = (methodName, args) => operator.viewFunction({ contractId: contract, methodName, args });
+          if (!(await view("intent_executed", { intent_id: intent }))) {
+            const balance = BigInt(await view("mt_balance_of", { account_id: from, token_id: tokenId }));
+            const deficit = BigInt(row.amount) - balance;
+            if (deficit > 0n) {
+              await call("mt_mint", { receiver_id: from, token_id: tokenId, amount: String(deficit),
+                memo: "Merchant shelf restock" });
+            }
+          }
+        }
+        const tx = await call("relayed_transfer", { intent_id: intent, sender_id: from, receiver_id: to,
           token_ids: [tokenId], amounts: [String(row.amount)], memo: row.memo || null });
+        if (row.useNow) {
+          await call("relayed_transfer", { intent_id: `${intent}:use`, sender_id: to, receiver_id: contract,
+            token_ids: [tokenId], amounts: [String(row.amount)], memo: "Consumed on route" });
+        }
         return { status: "confirmed", tx, explorer: `${EXPLORERS[network] || EXPLORERS.testnet}/txns/${tx}` };
       }
       return { status: "recorded" };

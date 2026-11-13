@@ -19,6 +19,8 @@ const AMMO_GIFT := 12
 var hp: float
 var current_car: Car = null
 var _invuln := 0.0
+var field_rush := 0.0
+var field_speed_bonus := 0.0
 
 ## Revive acts like a HoldTask (TaskingState drives these on the reviver's machine).
 var progress := 0.0
@@ -201,6 +203,7 @@ func _try_companion_revive() -> bool:
 
 func _physics_process(delta: float) -> void:
 	_invuln = maxf(_invuln - delta, 0.0)
+	field_rush = maxf(field_rush - delta, 0.0)
 	if not Net.is_local_authority(self):
 		# Someone else's handyman: no physics here, but don't block anything while
 		# they're inside a car (invisible) or downed.
@@ -347,6 +350,21 @@ func _rpc_flashlit() -> void:
 	var rival := get_node_or_null(^"HumanRival")
 	if rival:
 		rival.on_flashlight()
+
+
+func apply_field_supply(commodity: String, amount: float, duration: float) -> void:
+	match commodity:
+		"medkit":
+			heal(amount)
+			_invuln = maxf(_invuln, duration)
+		"premium_ammo":
+			weapon.add_ammo(int(amount))
+		"battery":
+			_invuln = maxf(_invuln, duration)
+		"food_stock":
+			field_rush = maxf(field_rush, duration)
+			field_speed_bonus = amount
+	_flash(Color("#ffc77d"))
 
 
 func heal(amount: float) -> void:

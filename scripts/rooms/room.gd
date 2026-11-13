@@ -64,7 +64,6 @@ func _read_marker(m: RoomMarker) -> void:
 				RoomMarker.Kind.FUEL: Pickup.Kind.FUEL, RoomMarker.Kind.MEDKIT: Pickup.Kind.MEDKIT,
 				RoomMarker.Kind.FLARE_PISTOL: Pickup.Kind.FLARE_PISTOL,
 				RoomMarker.Kind.NEEDLE_SMG: Pickup.Kind.NEEDLE_SMG}[m.kind]
-<<<<<<< Updated upstream
 			var props := {"kind": k, "amount": m.pickup_amount(),
 				"lifetime": 0.0, "position": pos, "anchored": m.anchored}
 			if k in [Pickup.Kind.FLARE_PISTOL, Pickup.Kind.NEEDLE_SMG]:
@@ -77,13 +76,9 @@ func _read_marker(m: RoomMarker) -> void:
 					_pool_loot[hazard].append(props)
 				else:
 					_dynamic.append([Pickup.SCENE_PATH, props])
-=======
-			_dynamic.append([Pickup.SCENE_PATH, {"kind": k, "amount": m.pickup_amount(),
-				"lifetime": 0.0, "position": pos, "anchored": m.anchored}])
 		RoomMarker.Kind.CRATE:
 			_dynamic.append([Pickup.SCENE_PATH, {"kind": Pickup.crate_kind_for(m.commodity),
 				"amount": m.pickup_amount(), "lifetime": 0.0, "position": pos, "anchored": true}])
->>>>>>> Stashed changes
 		_:
 			pass  # zombie/car spawns join their groups themselves
 

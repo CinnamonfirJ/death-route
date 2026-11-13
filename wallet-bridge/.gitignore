@@ -1,8 +1,5 @@
 .env
 node_modules/
-<<<<<<< Updated upstream
 /.wrangler/
 /build/
-=======
 data/
->>>>>>> Stashed changes

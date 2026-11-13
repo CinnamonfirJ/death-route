@@ -1,5 +1,9 @@
 import { DurableObject } from "cloudflare:workers";
 import { createHandler } from "./auth-service.mjs";
+import { Market } from "./market.mjs";
+import { createChain } from "./nep245.mjs";
+import { parse } from "smol-toml";
+import rulesText from "../economy/pricing_rules.toml";
 
 export class SignInState extends DurableObject {
   constructor(ctx, env) {
@@ -24,8 +28,24 @@ export class SignInState extends DurableObject {
       },
       [Symbol.iterator]() { return this.entries()[Symbol.iterator](); },
     });
+    sql.exec("CREATE TABLE IF NOT EXISTS market_book (part INTEGER PRIMARY KEY, value TEXT)");
+    const saved = sql.exec("SELECT value FROM market_book ORDER BY part").toArray().map(row => row.value).join("");
+    const market = new Market(parse(rulesText), {
+      state: saved ? JSON.parse(saved) : null,
+      chain: createChain(env),
+      background: promise => ctx.waitUntil(promise),
+      persist: state => {
+        const text = JSON.stringify(state);
+        ctx.storage.transactionSync(() => {
+          sql.exec("DELETE FROM market_book");
+          for (let start = 0; start < text.length; start += 100_000) {
+            sql.exec("INSERT INTO market_book VALUES (?, ?)", start, text.slice(start, start + 100_000));
+          }
+        });
+      },
+    });
     this.handle = createHandler({
-      flows: store("flow"), states: store("state"), sessions: store("session"),
+      flows: store("flow"), states: store("state"), sessions: store("session"), market,
       background: (promise) => ctx.waitUntil(promise),
     });
   }

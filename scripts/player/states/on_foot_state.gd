@@ -29,6 +29,8 @@ func physics_update(delta: float) -> void:
 	if crouch != player.crouching:
 		player.crouching = crouch
 		player.sprite.scale.y = 0.85 if crouch else 1.0
+	if player.field_rush > 0.0 and not crouch:
+		target_speed *= 1.0 + player.field_speed_bonus
 	player.velocity = player.velocity.move_toward(input * target_speed, player.acceleration * delta)
 	player.move_and_slide()
 
@@ -64,7 +66,7 @@ func physics_update(delta: float) -> void:
 	else:
 		fire = Input.is_action_pressed(&"shoot") if not w.knife_equipped and w.stats.automatic \
 			else Input.is_action_just_pressed(&"shoot")
-	if fire:
+	if fire and (player.touch_mode or not _over_field_shop()):
 		w.try_attack()
 	if not w.knife_equipped and Input.is_action_just_pressed(&"reload"):
 		w.start_reload()
@@ -79,3 +81,11 @@ func _set_prompt(text: String) -> void:
 	if text != _prompt:
 		_prompt = text
 		EventBus.interact_prompt_changed.emit(text)
+
+
+func _over_field_shop() -> bool:
+	var mouse := player.get_viewport().get_mouse_position()
+	for menu: Control in get_tree().get_nodes_in_group(&"field_shop_menus"):
+		if menu.is_visible_in_tree() and menu.get_global_rect().has_point(mouse):
+			return true
+	return false

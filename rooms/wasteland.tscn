@@ -64,6 +64,7 @@ script = ExtResource("1_va3cw")
 location_name = "Route 9 Gas & Junk"
 depot_position = Vector2(624, 1280)
 extra_customer_positions = Array[Vector2]([Vector2(1040, 496), Vector2(1808, 752)])
+field_vendor_positions = Array[Vector2]([Vector2(720, 464), Vector2(752, 1200), Vector2(1360, 816)])
 
 [node name="Ground" type="TileMapLayer" parent="." unique_id=155838029]
 modulate = Color(0.75, 0.61, 0.52, 1)

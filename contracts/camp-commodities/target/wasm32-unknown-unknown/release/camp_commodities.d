@@ -1,1 +1,0 @@
-/Users/praiseokere/Desktop/dead\ route/death-route/contracts/camp-commodities/target/wasm32-unknown-unknown/release/camp_commodities.wasm: /Users/praiseokere/Desktop/dead\ route/death-route/contracts/camp-commodities/src/lib.rs /Users/praiseokere/Desktop/dead\ route/death-route/contracts/camp-commodities/target/near/camp_commodities_abi.zst

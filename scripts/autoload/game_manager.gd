@@ -113,6 +113,7 @@ func display_name(fallback := "Courier") -> String:
 
 # --- Per-run ---
 var run_scrap: int = 0
+var run_version := 0
 var run_kills: int = 0
 ## Supply crates picked up this run (commodity id -> count). Banked by end_run().
 var run_haul: Dictionary = {}
@@ -178,6 +179,7 @@ func set_character(id: StringName) -> void:
 # ---------- Run lifecycle ----------
 
 func start_run(location_id: StringName) -> void:
+	run_version += 1
 	phase = Phase.RUN
 	_run_location = location_id
 	run_scrap = 0

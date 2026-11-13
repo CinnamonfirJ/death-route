@@ -88,6 +88,7 @@ func _ready() -> void:
 	_apply.tooltip_text = "Makes this simulated week the camp's real state. Everyone in the market sees it."
 	_apply.pressed.connect(_apply_live)
 	buttons.add_child(_apply)
+	_apply.visible = bool(_report.get("can_apply", false))
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	buttons.add_child(spacer)
@@ -137,7 +138,7 @@ func _process(delta: float) -> void:
 func _apply_live() -> void:
 	_apply.disabled = true
 	_apply.text = "APPLYING..."
-	var result: Dictionary = await CampMarket.fast_forward(int(_report.get("days", 7)), true)
+	var result: Dictionary = await CampMarket.fast_forward(int(_report.get("days", 7)), true, int(_report.get("seed", 0)))
 	_apply.text = "APPLIED" if result.get("ok", false) else "FAILED"
 
 

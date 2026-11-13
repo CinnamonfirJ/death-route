@@ -17,3 +17,8 @@ class_name = "SignInState"
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["SignInState"]
+
+[[rules]]
+type = "Text"
+globs = ["**/pricing_rules.toml"]
+fallthrough = true

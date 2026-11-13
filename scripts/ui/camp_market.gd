@@ -77,7 +77,7 @@ func _refresh() -> void:
 	# changed, so a focused button survives the poll.
 	var signature := hash(JSON.stringify([CampMarket.online, CampMarket.busy, CampMarket.message, CampMarket.day,
 		CampMarket.merchants, CampMarket.balances, CampMarket.events, GameManager.currency,
-		GameManager.pending_hauls.size(), WalletSession.account_id]))
+		GameManager.pending_hauls.size(), WalletSession.signed_in]))
 	if signature == _signature:
 		return
 	_signature = signature
@@ -88,7 +88,7 @@ func _refresh() -> void:
 		_status.text = "%s  ·  Day %d" % [CampMarket.market_name, CampMarket.day]
 		_status.add_theme_color_override(&"font_color", TitleStyle.AMBER)
 	_ff.disabled = not CampMarket.online or CampMarket.busy
-	_account.text = "Trading as %s  ·  %s" % [CampMarket.account_label(), CampMarket.chain_label()]
+	_account.text = "Trading as %s" % CampMarket.account_label()
 	_refresh_haul()
 	_clear(_list)
 	if CampMarket.online:

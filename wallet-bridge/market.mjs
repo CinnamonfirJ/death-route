@@ -39,8 +39,10 @@ export class Market {
     this.rules = rules;
     this.persistPath = options.persistPath || "";
     this.chain = options.chain || null;
+    this.persist = options.persist;
+    this.background = options.background || (() => {});
     this.now = options.now || (() => Date.now());
-    this.state = this.persistPath ? this._load() : null;
+    this.state = options.state || (this.persistPath ? this._load() : null);
     if (!this.state) this.state = this.freshState();
     this._reconcileRules();
   }
@@ -83,6 +85,7 @@ export class Market {
   }
 
   save() {
+    if (this.persist) this.persist(this.state);
     if (!this.persistPath) return;
     mkdirSync(dirname(this.persistPath), { recursive: true });
     const tmp = this.persistPath + ".tmp";
@@ -221,11 +224,11 @@ export class Market {
   recordHaul({ player: playerId, account = "", runId, haul }) {
     const p = this.player(playerId);
     if (!runId || typeof runId !== "string") return { ok: false, error: "A run id is required." };
-    if (p.hauls[runId]) return { ok: true, duplicate: true, balances: { ...p.balances } };
+    if (Object.hasOwn(p.hauls, runId)) return { ok: true, duplicate: true, balances: { ...p.balances } };
     const credited = {};
     for (const [c, nRaw] of Object.entries(haul || {})) {
       const n = Math.floor(Number(nRaw));
-      if (!this.rules.commodities[c] || !Number.isFinite(n) || n <= 0 || n > 999) continue;
+      if (!Object.hasOwn(this.rules.commodities, c) || !Number.isFinite(n) || n <= 0 || n > 999) continue;
       p.balances[c] = (p.balances[c] || 0) + n;
       credited[c] = n;
     }
@@ -245,15 +248,21 @@ export class Market {
    * side "buy" = courier buys from merchant (spends scrap). The client is told the scrap
    * delta; scrap itself stays in the game save. `maxTotal` guards a buy against price moves.
    */
-  trade({ player: playerId, account = "", merchant: merchantId, commodity, side, qty, intentId, maxTotal }) {
-    const m = this.rules.merchants[merchantId];
+  trade({ player: playerId, account = "", merchant: merchantId, commodity, side, qty, intentId, maxTotal, useNow = false }) {
+    const m = Object.hasOwn(this.rules.merchants, merchantId) && this.rules.merchants[merchantId];
     if (!m) return { ok: false, error: "Unknown merchant." };
-    const stock = m.stock[commodity];
+    const stock = Object.hasOwn(m.stock, commodity) && m.stock[commodity];
     if (!stock) return { ok: false, error: `${m.name} doesn't deal in that.` };
     qty = Math.floor(Number(qty));
     if (!Number.isFinite(qty) || qty <= 0 || qty > 99) return { ok: false, error: "Quantity must be 1-99." };
     if (side !== "sell" && side !== "buy") return { ok: false, error: "Side must be sell or buy." };
-    if (intentId && this.state.intents[intentId]) return { ...this.state.intents[intentId], duplicate: true };
+    const intentKey = intentId && `${playerId}:${intentId}`;
+    if (intentKey && Object.hasOwn(this.state.intents, intentKey)) {
+      return { ...this.state.intents[intentKey], duplicate: true };
+    }
+    if (useNow && (side !== "buy" || qty !== 1 || commodity === "pizza_contract")) {
+      return { ok: false, error: "That item is unavailable for field use." };
+    }
     const book = this.state.merchants[merchantId];
     const p = this.player(playerId);
     const c = this.rules.commodities[commodity];
@@ -302,7 +311,7 @@ export class Market {
       book.inventory[commodity] = inv;
       book.treasury += total;
       book.lifetime_sold += filled;
-      p.balances[commodity] = (p.balances[commodity] || 0) + filled;
+      if (!useNow) p.balances[commodity] = (p.balances[commodity] || 0) + filled;
       p.scrap_spent += total;
     }
 
@@ -314,11 +323,11 @@ export class Market {
     p.history.push({ at: this.now(), side, merchant: merchantId, commodity, qty: filled, total });
     if (p.history.length > HISTORY_LIMIT) p.history.splice(0, p.history.length - HISTORY_LIMIT);
     if (intentId) {
-      this.state.intents[intentId] = result;
+      this.state.intents[intentKey] = result;
       const keys = Object.keys(this.state.intents);
       if (keys.length > 2000) for (const k of keys.slice(0, 500)) delete this.state.intents[k];
     }
-    this._ledger({ kind: "transfer", intent: intentId || "",
+    this._ledger({ kind: "transfer", intent: intentKey || "", useNow,
       from: side === "sell" ? playerId : `merchant:${merchantId}`,
       to: side === "sell" ? `merchant:${merchantId}` : playerId,
       account, merchant: merchantId, commodity, amount: filled, scrap: total,
@@ -333,7 +342,7 @@ export class Market {
 
   /** Couriers pool scrap to reopen a bankrupt merchant. */
   invest({ player: playerId, merchant: merchantId, scrap }) {
-    const m = this.rules.merchants[merchantId];
+    const m = Object.hasOwn(this.rules.merchants, merchantId) && this.rules.merchants[merchantId];
     if (!m) return { ok: false, error: "Unknown merchant." };
     const book = this.state.merchants[merchantId];
     if (book.open) return { ok: false, error: `${m.name} is open for business. Nothing to reopen.` };
@@ -523,7 +532,7 @@ export class Market {
     if (this.chain && this.chain.enabled && row.commodity) {
       row.status = "pending";
       const tokenId = this.rules.commodities[row.commodity].token_id;
-      this.chain.mirror(row, tokenId).then((outcome) => {
+      const work = this.chain.mirror(row, tokenId).then((outcome) => {
         Object.assign(row, outcome);
         this.save();
       }).catch((error) => {
@@ -531,6 +540,7 @@ export class Market {
         row.error = String(error?.message || error).slice(0, 200);
         this.save();
       });
+      this.background(work);
     }
     return row;
   }

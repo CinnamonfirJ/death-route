@@ -42,7 +42,7 @@ def package(source: Path, output: Path) -> None:
     shutil.copyfile(Path(__file__).with_name("dead_route_privacy.html"), output / "privacy.html")
     shutil.copyfile(Path(__file__).with_name("dead_route_pages_worker.js"), output / "_worker.js")
     (output / "_routes.json").write_text(
-        '{"version":1,"include":["/healthz","/signin","/signin/web","/oauth/callback","/api/device/*","/api/web/*","/api/entitlement"],"exclude":[]}',
+        '{"version":1,"include":["/healthz","/signin","/signin/web","/oauth/callback","/api/device/*","/api/web/*","/api/entitlement","/api/market/*"],"exclude":[]}',
         encoding="utf-8",
     )
 

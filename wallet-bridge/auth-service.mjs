@@ -64,7 +64,7 @@ function page(res, status, body) {
 // The Node host uses memory. Cloudflare supplies persistent stores so a
 // suspended instance cannot lose a sign-in between the browser and game.
 export function createHandler({ flows = new Map(), states = new Map(), sessions = new Map(),
-  background = () => {} } = {}) {
+  background = () => {}, market = null } = {}) {
   const pendingAccounts = new Map();
 
   function removeFlow(flow) {
@@ -204,8 +204,59 @@ export function createHandler({ flows = new Map(), states = new Map(), sessions 
     return res.end();
   }
 
+  async function marketRoute(req, res, action) {
+    if (!market) return json(res, 503, { error: "The market is unavailable." });
+    if (req.method === "GET" && action === "state") {
+      market.tick();
+      return json(res, 200, market.snapshot());
+    }
+    if (req.method !== "POST") return json(res, 405, { error: "Use POST." });
+    const body = await readBody(req);
+    const identity = sessions.get(body.session);
+    let id = "", account = "";
+    if (typeof body.session === "string" && identity?.expires > Date.now()) {
+      account = identity.account && identity.account.accountNetwork === market.chain?.network ? identity.account.accountId : "";
+      id = `google:${hash(identity.subject).digest("hex").slice(0, 24)}`;
+    } else if (body.session) {
+      return json(res, 401, { error: "Sign in again to use the market." });
+    } else if (process.env.MARKET_ALLOW_GUESTS !== "0" && typeof body.guest_id === "string" &&
+      /^[a-z0-9]{8,40}$/.test(body.guest_id)) {
+      id = `guest:${body.guest_id}`;
+    }
+    if (!id) return json(res, 401, { error: "Sign in or continue as a guest to trade." });
+    market.tick();
+    const merchant = String(body.merchant || "");
+    switch (action) {
+      case "state": return json(res, 200, market.snapshot(id));
+      case "trade": {
+        if (typeof body.intent_id !== "string" || !/^[a-zA-Z0-9_-]{8,64}$/.test(body.intent_id) ||
+            (body.side === "buy" && (!Number.isSafeInteger(body.max_total) || body.max_total < 0))) {
+          return json(res, 400, { error: "Invalid trade quote." });
+        }
+        return json(res, 200, market.trade({ player: id, account, merchant,
+          commodity: String(body.commodity || ""), side: body.side, qty: body.qty,
+          intentId: body.intent_id, maxTotal: body.max_total, useNow: body.use_now === true }));
+      }
+      case "haul": return json(res, 200, market.recordHaul({ player: id, account,
+        runId: typeof body.run_id === "string" ? body.run_id.slice(0, 80) : "", haul: body.haul }));
+      case "invest": return json(res, 200, market.invest({ player: id, merchant, scrap: body.scrap }));
+      case "fast-forward": {
+        const admin = process.env.MARKET_ADMIN_GOOGLE_SUB;
+        if (body.apply === true && (!admin || identity?.subject !== admin)) {
+          return json(res, 403, { error: "Live changes require the market operator." });
+        }
+        return json(res, 200, { ...market.fastForward({ days: body.days, seed: body.seed, apply: body.apply === true }), can_apply: Boolean(admin && identity?.subject === admin) });
+      }
+      case "ledger": return json(res, 200, { ok: true, rows: market.ledger(id), chain: market.chain?.describe() });
+      default: return json(res, 404, { error: "Page unavailable." });
+    }
+  }
+
   async function route(req, res) {
     const url = new URL(req.url, publicUrl);
+    if (url.pathname.startsWith("/api/market/")) {
+      return marketRoute(req, res, url.pathname.slice("/api/market/".length));
+    }
     if (req.method === "GET" && url.pathname === "/healthz") {
       return json(res, 200, { service: "dead-route-sign-in", google_configured: googleReady, provisioning_configured: provisioningReady });
     }

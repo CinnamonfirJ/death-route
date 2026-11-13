@@ -35,6 +35,25 @@ goods were hoarded has empty shelves and no income. Either way the ledger eventu
 reopen her, then pick the next route by what the camp needs: "Ammo is cheap today, let's run a
 combat-heavy route."
 
+## Field vendors
+
+Approach Rusty, Doc, or Mama G in any solo or co-op route to see their current stock in a small
+menu above them. Purchases use scrap earned in the current run. Rusty sells ammo and a short
+damage shield, Doc sells a healing shot with brief protection, and Mama G sells a speed boost.
+Each use consumes one unit from the same shared merchant stock shown in the Garage.
+
+The deployed Cloudflare sign-in worker also handles market requests and persists the books in
+its Durable Object. For on-chain settlement, set the public GitHub Actions variable
+`NEAR_MT_CONTRACT` to the deployed Camp Commodities account ID and `NEAR_MT_NETWORK` to
+its network (defaults to `testnet`). The configured `NEAR_RELAYER_ACCOUNT` must be an operator
+on that contract, and token IDs 1 through 5 must already be registered. Re-run the web workflow
+after changing these values. This uses the deployed contract's existing methods. The game can
+trade as a guest with the bridge ledger while chain settlement is being configured.
+
+The week simulation is available to couriers as a preview. To give an operator the option to
+apply it to the shared market, set the private Actions secret `MARKET_ADMIN_GOOGLE_SUB` to that
+operator's verified Google subject. It is separate from the OAuth client ID.
+
 ## How it maps to the requirements
 
 | Requirement | Where it lives |
@@ -43,7 +62,7 @@ combat-heavy route."
 | Social login, no chain friction | Google sign-in in [`wallet-bridge/server.mjs`](wallet-bridge/server.mjs) provisions a NEAR testnet account per Google identity through the relayer. Trades go through plain buttons; the relayer signs and pays gas. Guests can trade too (balances stay in the bridge ledger). |
 | Agent NPCs with wallets | Each merchant is a sub-account of the relayer (`rusty.<relayer>`, `doc.<relayer>`, `mama-g.<relayer>`), created on first use by [`wallet-bridge/nep245.mjs`](wallet-bridge/nep245.mjs). They buy and sell on their own from the pricing rules; the bridge is their brain. |
 | Readable pricing rules with a tooltip | [`economy/pricing_rules.toml`](economy/pricing_rules.toml) is the only tuning surface. The bridge returns a `reason` line and the worked `formula` with every quote; the Garage shows the line under the price and the formula in the row tooltip. |
-| Fast-forward (judge feature) | **FAST-FORWARD 7 DAYS** in the Market tab. The bridge simulates a week of synthetic couriers on a copy of the live books (deterministic seed) and the game plays it back: a price graph fills in day by day while the log prints *"Day 3: Doc (Camp Medic) went bankrupt. Shop closed."* **Apply to live market** makes it real. |
+| Fast-forward (judge feature) | **FAST-FORWARD 7 DAYS** in the Market tab. The bridge simulates a week of synthetic couriers on a copy of the live books (deterministic seed) and the game plays it back: a price graph fills in day by day while the log prints *"Day 3: Doc (Camp Medic) went bankrupt. Shop closed."* A configured market operator can apply the simulation to the live market. |
 | NEAR intents | A trade is an intent `{merchant, commodity, side, qty, intent_id, max_total}`. The bridge matches it against the books, then the relayer executes `relayed_transfer(intent_id, …)` on the contract, which is idempotent per intent id. This is a game-side intent relayer, not the `intents.near` verifier; `nep245.mjs` is the one file to swap if that integration is wanted. |
 
 ## The pricing algorithm
@@ -116,7 +135,7 @@ builds the UI, and round-trips a trade when a bridge is listening on 8787).
    the worked formula.
 3. Sell the Pizza Delivery Contract to Mama G: the delivery itself is the valuable token.
 4. Press **FAST-FORWARD 7 DAYS**. Watch the graph and the log; Doc goes bust around day 3 with the
-   default rules. Press **APPLY TO LIVE MARKET**, close, and show her card: *CLOSED · bankrupt*,
+   default rules. Press **APPLY TO LIVE MARKET** as the configured operator, close, and show her card: *CLOSED · bankrupt*,
    reopen fund `0 / 200`. Invest, reopen, trade again.
 5. Open [`economy/pricing_rules.toml`](economy/pricing_rules.toml) and change Doc's `elasticity`
    or a voice line. Restart the bridge. The game shows the new behaviour with no client patch.

@@ -1,9 +1,0 @@
-/Users/praiseokere/Desktop/dead route/death-route/contracts/camp-commodities/target/cargo-near-abi/debug/deps/near_global_contracts-3099e84307d0df34.d: /Users/praiseokere/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/near-global-contracts-0.2.6/src/lib.rs /Users/praiseokere/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/near-global-contracts-0.2.6/src/global_contract_identifier.rs /Users/praiseokere/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/near-global-contracts-0.2.6/src/state_init.rs
-
-/Users/praiseokere/Desktop/dead route/death-route/contracts/camp-commodities/target/cargo-near-abi/debug/deps/libnear_global_contracts-3099e84307d0df34.rlib: /Users/praiseokere/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/near-global-contracts-0.2.6/src/lib.rs /Users/praiseokere/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/near-global-contracts-0.2.6/src/global_contract_identifier.rs /Users/praiseokere/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/near-global-contracts-0.2.6/src/state_init.rs
-
-/Users/praiseokere/Desktop/dead route/death-route/contracts/camp-commodities/target/cargo-near-abi/debug/deps/libnear_global_contracts-3099e84307d0df34.rmeta: /Users/praiseokere/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/near-global-contracts-0.2.6/src/lib.rs /Users/praiseokere/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/near-global-contracts-0.2.6/src/global_contract_identifier.rs /Users/praiseokere/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/near-global-contracts-0.2.6/src/state_init.rs
-
-/Users/praiseokere/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/near-global-contracts-0.2.6/src/lib.rs:
-/Users/praiseokere/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/near-global-contracts-0.2.6/src/global_contract_identifier.rs:
-/Users/praiseokere/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/near-global-contracts-0.2.6/src/state_init.rs:

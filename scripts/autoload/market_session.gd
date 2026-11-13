@@ -10,7 +10,7 @@ signal changed
 signal trade_completed(result: Dictionary)
 
 const POLL_SECONDS := 4.0
-const OFFLINE_MESSAGE := "Camp market offline. Start the wallet bridge (npm --prefix wallet-bridge start)."
+const OFFLINE_MESSAGE := "Market unavailable. Try again shortly."
 
 var online := false
 var message := ""
@@ -106,7 +106,7 @@ func refresh() -> void:
 		return
 	_refreshing = true
 	var result := await _post("state", {})
-	if result.is_empty():
+	if result.is_empty() or result.has("error"):
 		online = false
 		message = OFFLINE_MESSAGE
 	else:
@@ -118,10 +118,12 @@ func refresh() -> void:
 
 ## Sell to or buy from a merchant. For buys the scrap is checked against the quote ladder first
 ## and the bridge is told the maximum we agreed to pay, so a price move can't overcharge.
-func trade(merchant_id: String, commodity: String, side: String, qty: int) -> Dictionary:
+func trade(merchant_id: String, commodity: String, side: String, qty: int, use_now := false) -> Dictionary:
 	if busy:
 		return {"ok": false, "error": "Still finishing the last trade."}
-	var body := {"merchant": merchant_id, "commodity": commodity, "side": side, "qty": qty,
+	var reserved := 0
+	var run_version := GameManager.run_version
+	var body := {"use_now": use_now, "merchant": merchant_id, "commodity": commodity, "side": side, "qty": qty,
 		"intent_id": _intent_id()}
 	if side == "buy":
 		var ladder: Array = quote(merchant_id, commodity).get("ask_ladder", [])
@@ -131,7 +133,12 @@ func trade(merchant_id: String, commodity: String, side: String, qty: int) -> Di
 		var total := 0
 		for i in qty:
 			total += int(ladder[i])
-		if total > GameManager.currency:
+		if use_now:
+			if GameManager.phase != GameManager.Phase.RUN or total > GameManager.run_scrap:
+				return {"ok": false, "error": "Need %d scrap from this run." % total}
+			reserved = total
+			EventBus.scrap_collected.emit(-reserved)
+		elif total > GameManager.currency:
 			return {"ok": false, "error": "Not enough scrap: %d needed." % total}
 		body["qty"] = qty
 		body["max_total"] = total
@@ -143,12 +150,22 @@ func trade(merchant_id: String, commodity: String, side: String, qty: int) -> Di
 	busy = true
 	changed.emit()
 	var result := await _post("trade", body)
+	if result.is_empty():
+		result = await _post("trade", body)  # Retry the same intent after a lost response.
 	busy = false
 	if result.is_empty():
 		result = {"ok": false, "error": OFFLINE_MESSAGE}
 		online = false
+	if use_now:
+		var refund := reserved + int(result.get("scrap_delta", 0))
+		if refund > 0:
+			if GameManager.phase == GameManager.Phase.RUN and GameManager.run_version == run_version:
+				EventBus.scrap_collected.emit(refund)
+			else:
+				GameManager.add_currency(refund if GameManager.last_run.get("success", false) else floori(refund / 2.0))
 	if result.get("ok", false):
-		GameManager.add_currency(int(result.get("scrap_delta", 0)))
+		if not use_now:
+			GameManager.add_currency(int(result.get("scrap_delta", 0)))
 		_set_balances(result.get("balances", balances))
 		_merge_quote(merchant_id, result.get("quote", {}), int(result.get("merchant_treasury", -1)))
 		Sfx.play(&"pickup")
@@ -183,8 +200,11 @@ func invest(merchant_id: String, scrap: int) -> Dictionary:
 
 ## Judge mode: the bridge simulates `days` of courier traffic and returns prices day by day.
 ## Nothing changes for real unless `apply` is true.
-func fast_forward(days := 7, apply := false) -> Dictionary:
-	var result := await _post("fast-forward", {"days": days, "apply": apply})
+func fast_forward(days := 7, apply := false, seed := -1) -> Dictionary:
+	var body := {"days": days, "apply": apply}
+	if seed >= 0:
+		body["seed"] = seed
+	var result := await _post("fast-forward", body)
 	if apply and result.get("ok", false):
 		refresh()
 	return result

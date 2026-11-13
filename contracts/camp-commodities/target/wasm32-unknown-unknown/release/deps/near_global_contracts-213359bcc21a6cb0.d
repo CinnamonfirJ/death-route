@@ -1,9 +1,0 @@
-/Users/praiseokere/Desktop/dead route/death-route/contracts/camp-commodities/target/wasm32-unknown-unknown/release/deps/near_global_contracts-213359bcc21a6cb0.d: /Users/praiseokere/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/near-global-contracts-0.2.6/src/lib.rs /Users/praiseokere/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/near-global-contracts-0.2.6/src/global_contract_identifier.rs /Users/praiseokere/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/near-global-contracts-0.2.6/src/state_init.rs
-
-/Users/praiseokere/Desktop/dead route/death-route/contracts/camp-commodities/target/wasm32-unknown-unknown/release/deps/libnear_global_contracts-213359bcc21a6cb0.rlib: /Users/praiseokere/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/near-global-contracts-0.2.6/src/lib.rs /Users/praiseokere/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/near-global-contracts-0.2.6/src/global_contract_identifier.rs /Users/praiseokere/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/near-global-contracts-0.2.6/src/state_init.rs
-
-/Users/praiseokere/Desktop/dead route/death-route/contracts/camp-commodities/target/wasm32-unknown-unknown/release/deps/libnear_global_contracts-213359bcc21a6cb0.rmeta: /Users/praiseokere/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/near-global-contracts-0.2.6/src/lib.rs /Users/praiseokere/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/near-global-contracts-0.2.6/src/global_contract_identifier.rs /Users/praiseokere/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/near-global-contracts-0.2.6/src/state_init.rs
-
-/Users/praiseokere/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/near-global-contracts-0.2.6/src/lib.rs:
-/Users/praiseokere/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/near-global-contracts-0.2.6/src/global_contract_identifier.rs:
-/Users/praiseokere/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/near-global-contracts-0.2.6/src/state_init.rs:

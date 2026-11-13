@@ -67,6 +67,7 @@ script = ExtResource("1_h30cj")
 location_id = &"hospital"
 depot_position = Vector2(752, 1270)
 extra_customer_positions = Array[Vector2]([Vector2(1008, 336), Vector2(1392, 880)])
+field_vendor_positions = Array[Vector2]([Vector2(528, 944), Vector2(368, 496), Vector2(880, 1168)])
 location_name = "St. Mercy Hospital"
 
 [node name="Ground" type="TileMapLayer" parent="." unique_id=481382970]
