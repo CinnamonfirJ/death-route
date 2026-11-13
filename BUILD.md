@@ -28,7 +28,7 @@ The [GitHub Actions workflow](.github/workflows/deploy-web.yml) exports the game
 1. In Cloudflare, open **My Profile → API Tokens → Create Token → Create Custom Token**. Grant **Account → Cloudflare Pages → Edit**, scoped to the account that owns `dead-route`.
 2. In the GitHub repository, go to **Settings → Secrets and variables → Actions → New repository secret**. Name it `CLOUDFLARE_API_TOKEN` and paste the Cloudflare token into the secret value.
 3. Open **Actions → Build and deploy Dead Route → Run workflow**, select `main`, and start the run. Future pushes to `main` publish automatically. If the secret is missing, the workflow builds an artifact and skips publishing.
-4. Verify [dead-route.pages.dev](https://dead-route.pages.dev/) reaches **Tap to play** and opens the title screen. In Cloudflare, attach `deadroute.run` under **Workers & Pages → dead-route → Custom domains** and wait for it to become active before testing the same flow at the custom domain.
+4. Verify [dead-route.pages.dev](https://dead-route.pages.dev/) and [deathroute.fun](https://deathroute.fun/) both reach **Tap to play** and open the title screen. Manage the custom domain in Cloudflare under **Workers & Pages → dead-route → Custom domains**.
 
 For a one-off dashboard upload, export the Web preset to `build/web/index.html`, then run `python tools/package_cloudflare_web.py build/web build/pages --zip build/DeadRoute-Cloudflare.zip` with a new or empty `build/pages` directory.
 
