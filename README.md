@@ -1,24 +1,41 @@
 # Death Route
 
-Death Route is a Godot 4.7 zombie-survival delivery game with solo play and WebSocket co-op. Open [`project.godot`](project.godot) in Godot to run it locally. See [BUILD.md](BUILD.md) for exports and multiplayer setup.
+Death Route is a Godot 4.7 zombie-survival delivery game with solo play and WebSocket co-op. [Play in your browser](https://deathroute.fun/). Open [`project.godot`](project.godot) in Godot to run it locally. See [BUILD.md](BUILD.md) for exports and multiplayer setup.
+
+**Track `games` · Games With Real Economies · The economy is the gameplay**
 
 ## The problem
 
-A fixed-price shop gives players little reason to react to what other players scavenge or buy. We wanted the supply run, the field purchase, and the camp market to affect each other while players stay focused on surviving the route.
+A fixed-price shop gives players little reason to react to what other people scavenge or buy. Death Route makes those decisions matter on the next run. The ammo your friend buys during a firefight comes off the same shelf you shop from, and the medkits you haul back can lower what Doc offers the next courier.
 
 ## What we built
 
-Death Route is a top-down zombie survival and pizza-delivery game for solo play or up to four players in online co-op. Crews fight, drive, scavenge supplies, deliver orders, finish repair jobs, and return to Pizza Co. to clock out. During the run, players spend earned scrap at field vendors for ammo, healing, a temporary damage shield, or a speed boost. The Garage Market and field vendors draw from shared merchant stock. Selling medkits increases stock and can lower the next quote. Buying can raise prices or sell a shelf out. Merchants can go bankrupt, and players can pool scrap to reopen them. The Garage's Fast-forward 7 Days mode previews a simulated week of prices, stock, and shop closures.
+Death Route turns the market-town idea into a top-down zombie survival and pizza-delivery game for solo play or up to four players in online co-op. The Survivor Camp market connects what the crew brings home to what everyone can afford in the field.
+
+- **Every 30 seconds**, make a choice under pressure. Scavenge a supply crate, pick up a pizza order, or spend this run's scrap at a field vendor for ammo, healing, a temporary shield, or a speed boost. The quick-buy menu opens over the merchant while zombies keep moving.
+- **Every five minutes or so**, finish the orders and repair jobs, then clock out at Pizza Co. Bank the haul and trade in **Garage → Market**. A successful delivery route adds a Pizza Delivery Contract that Mama G can buy.
+- **Each session**, check what Rusty, Doc, and Mama G have in stock. The field vendors and Garage share inventory across players. A crew can buy out the last box of ammo, sell into a glut, or pool scrap to reopen a bankrupt shop.
+
+Each of the three merchants has its own NEAR testnet account, inventory, and treasury. The market engine uses a readable `economy/pricing_rules.toml` file to set prices from stock relative to a target. Selling medkits to Doc raises her stock and can lower her next offer. Buying reduces stock and can push prices up. Simulated daily demand consumes supplies and pays merchants, while upkeep drains their treasuries. Shops that fall below their treasury threshold close until players fund their reopening. These changes happen during play without a developer patch.
+
+In **Garage → Market**, each quote shows the merchant's reasoning and its tooltip shows the calculation. **Fast-forward 7 Days** plays back a simulated week of trades, price movements, and possible shop closures in **24 seconds**. It runs as a preview by default.
 
 ## How NEAR fits in
 
-Players can sign in with Google or play as guests. The bridge provisions NEAR testnet accounts in the background and uses the deployed Camp Commodities NEP-245 contract for five tradable commodity types: Medkits, Premium Ammo, Pizza Delivery Contracts, Flashlight Batteries, and Food Stock. For eligible signed-in trades, the game relayer submits transfers and pays gas in the background. Players trade through game buttons without a seed phrase, wallet popup, or gas prompt. Guest trades use the shared market ledger, and scrap stays off-chain.
+One deployed NEP-245 contract on NEAR testnet holds all **five tradable commodity types** in the camp market. Medkits, Premium Ammo, Pizza Delivery Contracts, Flashlight Batteries, and Food Stock each have a token ID. Eligible signed-in players and the merchant accounts can hold balances on that contract. The bridge runs the shared market and its pricing rules. Scrap, weapons, vehicles, and route state remain off-chain.
 
-The bridge uses the game's relayer and the Camp Commodities contract's idempotent
-`relayed_transfer` method. The official NEAR Intents verifier is outside the current integration.
-The [deployed testnet contract](https://testnet.nearblocks.io/address/camp.deadroute-sponsor-7x29.testnet)
-contains the five commodity token IDs. The optional minted shotgun uses a separate NFT entitlement
-check. See [AUTH_SETUP.md](AUTH_SETUP.md) and [ECONOMY.md](ECONOMY.md) for implementation and setup.
+Players sign in with Google or play as guests. The bridge provisions testnet accounts in the background. For eligible signed-in trades, the player accepts a quote and the game's relayer submits the transfer and covers gas. The normal loop uses Buy and Sell buttons without seed phrases, wallet popups, or gas prompts. Guests trade through the shared bridge ledger.
+
+The game uses its own trade requests and the Camp Commodities contract's idempotent `relayed_transfer` method. Official NEAR Intents verification is outside the current integration.
+
+## Judge walkthrough
+
+1. **Make a field purchase.** Start a solo or co-op route, earn scrap, then approach Rusty and buy an Ammo Dump. The crew can keep moving while you buy. The purchase draws from the same merchant stock shown in the Garage.
+2. **Move Doc's quote.** Bank a medkit haul, open **Garage → Market**, and note Doc's stock and buy offer. Sell several medkits while she has room and scrap. Compare her next offer and hover the quote to see the reasoning and calculation.
+3. **Watch a week pass.** Select **Fast-forward 7 Days** and watch the stock, price, and closure events. If a shop is already closed in the live market, open its card to see the pooled reopening fund. Applying a simulation to the shared market requires a configured operator.
+4. **See what settles on NEAR.** The contract lists the five token IDs and holds the merchant balances. The bridge handles the transaction outside the gameplay UI. [Camp Commodities on NEAR testnet](https://testnet.nearblocks.io/address/camp.deadroute-sponsor-7x29.testnet)
+
+The optional minted shotgun uses a separate NFT entitlement check. See [AUTH_SETUP.md](AUTH_SETUP.md) for sign-in and [ECONOMY.md](ECONOMY.md) for the pricing model and deployment. [NEP-245 specification](https://github.com/near/NEPs/blob/master/neps/nep-0245.md)
 
 ## Play a route
 
