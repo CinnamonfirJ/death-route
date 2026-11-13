@@ -39,6 +39,7 @@ def package(source: Path, output: Path) -> None:
     for name in EXPORT_FILES:
         if name not in {"index.html", "index.wasm"}:
             shutil.copyfile(source / name, output / name)
+    shutil.copyfile(Path(__file__).with_name("dead_route_privacy.html"), output / "privacy.html")
 
     # Disable Pages' SPA fallback so a missing asset or API returns a real 404.
     (output / "404.html").write_text(

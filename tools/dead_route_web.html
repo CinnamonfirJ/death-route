@@ -26,6 +26,8 @@
       left: 50%; transform: translateX(-50%); width: max-content; max-width: 85%;
       padding: 10px 14px; border: 1px solid #e38b56; background: #1a192e; text-align: center; }
     h1 { margin: 0; font-size: clamp(28px, 6vw, 52px); text-transform: uppercase; letter-spacing: .10em; }
+    #about { margin: 0; max-width: 44ch; color: #ddd0df; }
+    #privacy { color: #ffc688; }
     button { min-height: 48px; padding: 8px 26px; color: #fff2df; background: #362238;
       border: 1px solid #e38b56; font: 600 17px system-ui, sans-serif; }
     button:focus-visible { outline: 2px solid #ffc688; outline-offset: 3px; }
@@ -46,12 +48,14 @@
   <div id="fullscreen-notice" role="status" hidden></div>
   <main id="start">
     <h1>Dead Route</h1>
+    <p id="about">Deliver pizza through a zombie outbreak. Play solo or join friends in an online room.</p>
     <div id="launch-actions">
       <button id="launch" type="button" disabled>Loading…</button>
       <button id="fullscreen" type="button" aria-pressed="false" hidden>Fullscreen</button>
     </div>
     <div id="status" role="status"></div>
     <p id="fullscreen-status" role="status"></p>
+    <a id="privacy" href="privacy.html" target="_blank" rel="noopener">Privacy policy</a>
   </main>
   <script src="$GODOT_URL"></script>
   <script>
