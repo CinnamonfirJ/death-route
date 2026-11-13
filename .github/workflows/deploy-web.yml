@@ -71,6 +71,26 @@ jobs:
           mkdir -p "$template_dir"
           unzip -j "$RUNNER_TEMP/templates.tpz" 'templates/web_nothreads_release.zip' -d "$template_dir"
 
+      - name: Deploy the sign-in service
+        if: steps.room_service.outputs.configured == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_ROOMS_API_TOKEN }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci --prefix wallet-bridge --omit=dev
+          if [ -z "$GOOGLE_CLIENT_ID" ] || [ -z "$GOOGLE_CLIENT_SECRET" ]; then
+            echo "::warning::Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in Actions secrets to enable Google sign-in."
+            npx --yes "wrangler@$WRANGLER_VERSION" deploy --config wallet-bridge/wrangler.toml
+          else
+            secret_file="$(mktemp)"
+            trap 'rm -f "$secret_file"' EXIT
+            node -e 'const {GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET} = process.env; process.stdout.write(JSON.stringify({GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET}));' > "$secret_file"
+            npx --yes "wrangler@$WRANGLER_VERSION" deploy --config wallet-bridge/wrangler.toml --secrets-file "$secret_file"
+          fi
+
       - name: Export the web game
         shell: bash
         run: |

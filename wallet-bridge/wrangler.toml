@@ -1,0 +1,19 @@
+name = "dead-route-sign-in"
+main = "worker.mjs"
+compatibility_date = "2026-06-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = false
+preview_urls = false
+keep_vars = true
+
+[vars]
+WALLET_PUBLIC_URL = "https://deathroute.fun"
+GAME_ORIGIN = "https://deathroute.fun,https://dead-route.pages.dev"
+
+[[durable_objects.bindings]]
+name = "SIGN_IN"
+class_name = "SignInState"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["SignInState"]

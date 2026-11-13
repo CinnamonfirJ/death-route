@@ -40,6 +40,11 @@ def package(source: Path, output: Path) -> None:
         if name not in {"index.html", "index.wasm"}:
             shutil.copyfile(source / name, output / name)
     shutil.copyfile(Path(__file__).with_name("dead_route_privacy.html"), output / "privacy.html")
+    shutil.copyfile(Path(__file__).with_name("dead_route_pages_worker.js"), output / "_worker.js")
+    (output / "_routes.json").write_text(
+        '{"version":1,"include":["/healthz","/signin","/oauth/callback","/api/device/*","/api/entitlement"],"exclude":[]}',
+        encoding="utf-8",
+    )
 
     # Disable Pages' SPA fallback so a missing asset or API returns a real 404.
     (output / "404.html").write_text(
