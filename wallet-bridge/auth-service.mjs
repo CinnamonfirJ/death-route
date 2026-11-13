@@ -136,8 +136,10 @@ export function createHandler({ flows = new Map(), states = new Map(), sessions 
         redirect_uri: callback, code_verifier: flow.verifier,
       });
       form.set("client_secret", clientSecret);
+      // Workers accepts manual redirects. Reject non-success responses so
+      // the authorization code and client secret stay at Google's token endpoint.
       const response = await fetch(tokenEndpoint, {
-        method: "POST", body: form, redirect: "error", signal: AbortSignal.timeout(10_000),
+        method: "POST", body: form, redirect: "manual", signal: AbortSignal.timeout(10_000),
       });
       if (!response.ok) throw new Error("Token exchange failed");
       stage = "identity verification";
