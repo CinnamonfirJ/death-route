@@ -1,6 +1,6 @@
 class_name PizzaCargo
 extends Node2D
-## Co-op: one shared pizza per run. Versus: one per team (team >= 0), created by
+## Co-op orders share the same cargo rules. Versus has one pizza per team, created by
 ## MatchState, hidden until its spawn timer runs out. The host decides pickup, drop,
 ## handoff (and in versus, steal / reset by enemies).
 
@@ -8,6 +8,11 @@ signal changed
 
 const REACH := 38.0
 
+@export var follow_stiffness := 85.0
+@export var follow_damping := 12.0
+@export var follow_leash := 52.0
+
+var number := 1
 var customer: Node2D
 ## Versus: owning team (-1 = co-op shared pizza).
 var team := -1
@@ -17,11 +22,14 @@ var _spawned := false
 var _spawn_position := Vector2.ZERO
 var _last_position := Vector2.ZERO
 var _glow: Sprite2D
+var _spring_velocity := Vector2.ZERO
+var _travel_direction := Vector2.RIGHT
 
 @onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
 
 
 func _ready() -> void:
+	add_to_group(&"pizza_cargo")
 	sprite.sprite_frames = Assets.item_frames("pizza")
 	sprite.play(&"default")
 	_glow = Fx.attach_glow(self, Color(1.0, 0.72, 0.33, 0.45), 0.95, Vector2(0, -9), 0.0)
@@ -65,7 +73,7 @@ func can_interact(player: Player) -> bool:
 
 func get_interact_prompt(player: Player) -> String:
 	if _is_owner(player.get_multiplayer_authority()):
-		return "[E] Pick up %s" % ("your pizza" if team >= 0 else "pizza")
+		return "[E] Pick up %s" % ("your pizza" if team >= 0 else "pizza for Order %d" % number)
 	if _enemy_rule() == "steal":
 		return "[E] Steal %s's pizza" % MatchState.team_name(team)
 	return "[E] Toss %s's pizza (it respawns elsewhere)" % MatchState.team_name(team)
@@ -93,7 +101,7 @@ func _rpc_interact(handoff: bool) -> void:
 
 
 func _try_interaction(player: Player, handoff: bool) -> void:
-	if not _spawned or delivered or player == null or player.is_dead() or not player.visible:
+	if not _spawned or delivered or player == null or player.is_dead() or not player.visible or not player.is_on_foot():
 		return
 	var id := player.get_multiplayer_authority()
 	var drop := _drop_off()
@@ -117,7 +125,7 @@ func _try_interaction(player: Player, handoff: bool) -> void:
 		_set_state(player.global_position, id, false)
 
 
-func _physics_process(_delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	if carrier_id == 0:
 		return
 	var carrier := _player_for(carrier_id)
@@ -126,8 +134,24 @@ func _physics_process(_delta: float) -> void:
 			_set_state(_drop_position(), 0, false)
 		return
 	var car := Net.car_of(carrier)
-	_last_position = car.global_position if is_instance_valid(car) else carrier.global_position
-	global_position = _last_position
+	var anchor := car.global_position if is_instance_valid(car) else carrier.global_position
+	var motion := anchor - _last_position
+	_last_position = anchor
+	if motion.length_squared() > 0.09:
+		_travel_direction = _travel_direction.lerp(motion.normalized(), minf(delta * 10.0, 1.0))
+	var rank := 0
+	for order: PizzaCargo in get_tree().get_nodes_in_group(&"pizza_cargo"):
+		if order != self and order.number < number and order.carrier_id == carrier_id:
+			rank += 1
+	var tail := _travel_direction * (15.0 + rank * 15.0)
+	var target := anchor - tail + _travel_direction.orthogonal() * (7.0 if rank % 2 else -7.0)
+	if global_position.distance_to(anchor) > follow_leash * 4.0:
+		global_position = target
+		_spring_velocity = Vector2.ZERO
+	_spring_velocity += ((target - global_position) * follow_stiffness - _spring_velocity * follow_damping) * delta
+	global_position += _spring_velocity * delta
+	global_position = anchor + (global_position - anchor).limit_length(follow_leash)
+	sprite.rotation = clampf(_spring_velocity.x * 0.008, -0.35, 0.35)
 
 
 func _drop_position() -> Vector2:
@@ -157,6 +181,8 @@ func _set_state(pos: Vector2, new_carrier: int, handed_off: bool) -> void:
 @rpc("authority", "call_local", "reliable")
 func _apply_state(pos: Vector2, new_carrier: int, handed_off: bool) -> void:
 	_spawned = true
+	_spring_velocity = Vector2.ZERO
+	sprite.rotation = 0.0
 	global_position = pos
 	_last_position = pos
 	carrier_id = new_carrier
@@ -164,7 +190,7 @@ func _apply_state(pos: Vector2, new_carrier: int, handed_off: bool) -> void:
 	visible = not delivered
 	var on_ground := carrier_id == 0
 	sprite.scale = Vector2.ONE * (2.5 if on_ground else 1.5)
-	sprite.position.y = -9.0 if on_ground else -39.0
+	sprite.position.y = -9.0 if on_ground else -14.0
 	_glow.visible = on_ground
 	if team >= 0:
 		_update_waypoints()

@@ -1,16 +1,21 @@
 extends Node
 ## Proximity voice chat (online matches).
 ##
-## Your mic is captured on a muted "VoiceMic" bus (AudioEffectCapture), mixed to mono,
-## resampled to MatchConfig.voice_sample_rate, mu-law packed to 8 bits and sent in
+## Browser capture reports its actual AudioContext rate. Native capture uses the muted VoiceMic bus.
+## Both are resampled to MatchConfig.voice_sample_rate, mu-law packed to 8 bits and sent in
 ## ~60 ms chunks (unreliable RPC; the host relays to everyone else).
 ## Each remote player gets an AudioStreamPlayer2D ("Voice") on their handyman fed by an
 ## AudioStreamGenerator, so voices fade with distance and pan left/right around your
 ## own handyman (the AudioListener2D on the local player). Teammates and enemies alike.
 ##
-## Settings (Settings panel): voice_enabled (mic on/off, default off), voice_mode
-## ("push" = hold T, or "open" = voice activated), voice_volume, voice_mute_others.
-## Browsers ask for microphone permission; Android needs RECORD_AUDIO (export preset).
+## The host enables proximity voice for the room; each player opts in from Pause.
+
+signal microphone_changed
+
+var mic_enabled := false
+var mic_status := "Off · Enable to talk to players nearby."
+var _web_frames: JavaScriptObject
+var _web_status: JavaScriptObject
 
 const MIC_BUS := "VoiceMic"
 const OUT_BUS := "Voice"
@@ -67,15 +72,62 @@ func _apply_settings() -> void:
 	AudioServer.set_bus_mute(i, bool(GameManager.get_setting("voice_mute_others")))
 
 
-func _process(delta: float) -> void:
-	var want := Net.is_online() and Net.in_match and bool(GameManager.get_setting("voice_enabled"))
-	if want != _mic_on:
-		_set_mic(want)
+func set_microphone(enabled: bool) -> void:
+	mic_enabled = enabled and Net.allows_voice() and Net.in_match
+	if OS.has_feature("web"):
+		var browser := JavaScriptBridge.get_interface("window")
+		if _web_frames == null:
+			_web_frames = JavaScriptBridge.create_callback(_receive_browser_frames)
+			_web_status = JavaScriptBridge.create_callback(_receive_browser_status)
+		if mic_enabled:
+			browser.deadRouteStartVoice(_web_frames, _web_status)
+		else:
+			browser.deadRouteStopVoice()
+	else:
+		_set_mic(mic_enabled)
+	_send_buf.clear()
+	_resample_pos = 0.0
+	_hang = 0.0
+	talking = false
+	mic_status = "Waiting for microphone…" if mic_enabled and OS.has_feature("web") else (
+		"On · Nearby players can hear you." if mic_enabled else "Off · Enable to talk to players nearby.")
+	microphone_changed.emit()
+
+
+func _receive_browser_frames(args: Array) -> void:
+	if not mic_enabled or args.size() != 2:
+		return
+	var bytes := JavaScriptBridge.js_buffer_to_packed_byte_array(args[0])
+	var samples := bytes.to_float32_array()
+	var frames := PackedVector2Array()
+	frames.resize(samples.size())
+	for i in samples.size():
+		frames[i] = Vector2.ONE * samples[i]
+	var rate := float(args[1])
+	if rate > 0.0:
+		feed(frames, rate, frames.size() / rate)
+
+
+func _receive_browser_status(args: Array) -> void:
+	if not mic_enabled or args.is_empty():
+		return
+	var ready := bool(args[0])
+	mic_enabled = ready
+	mic_status = "On · Nearby players can hear you." if ready else (
+		"Microphone unavailable. Check browser permissions and try again.")
+	microphone_changed.emit()
+
+
+func _process(_delta: float) -> void:
+	var in_room := Net.allows_voice() and Net.in_match
+	if mic_enabled and not in_room:
+		set_microphone(false)
 	if not _mic_on or _capture == null:
 		return
 	var n := _capture.get_frames_available()
-	if n > 0:
-		feed(_capture.get_buffer(n), AudioServer.get_mix_rate(), delta)
+	var rate := AudioServer.get_mix_rate()
+	if n > 0 and rate > 0.0:
+		feed(_capture.get_buffer(n), rate, n / rate)
 
 
 func _set_mic(on: bool) -> void:
@@ -87,6 +139,7 @@ func _set_mic(on: bool) -> void:
 			_mic_player = AudioStreamPlayer.new()
 			_mic_player.stream = AudioStreamMicrophone.new()
 			_mic_player.bus = MIC_BUS
+			_mic_player.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
 			add_child(_mic_player)
 		_mic_player.play()
 		if _capture:
@@ -103,22 +156,20 @@ func feed(frames: PackedVector2Array, rate: float, delta: float) -> void:
 	for f in frames:
 		sum += (f.x + f.y) * (f.x + f.y) * 0.25
 	level = sqrt(sum / maxf(frames.size(), 1))
-	var push := Input.is_action_pressed(&"voice_talk")
-	if GameManager.get_setting("voice_mode") == "open":
-		if level >= cfg.voice_open_mic_threshold:
-			_hang = HANGOVER
-		else:
-			_hang -= delta
-		talking = push or _hang > 0.0
+	if level >= cfg.voice_open_mic_threshold:
+		_hang = HANGOVER
 	else:
-		talking = push
-	if not talking or not Net.is_online():
+		_hang -= delta
+	talking = Input.is_action_pressed(&"voice_talk") or _hang > 0.0
+	if not talking or not Net.allows_voice() or not Net.in_match:
 		_send_buf.clear()
+		_resample_pos = 0.0
 		return
 	# Mono + linear-step resample to the network rate.
 	var step := rate / float(_rate)
 	while _resample_pos < frames.size():
-		var f: Vector2 = frames[int(_resample_pos)]
+		var i := int(_resample_pos)
+		var f := frames[i].lerp(frames[mini(i + 1, frames.size() - 1)], _resample_pos - i)
 		_send_buf.append(clampf((f.x + f.y) * 0.5, -1.0, 1.0))
 		_resample_pos += step
 	_resample_pos -= frames.size()
@@ -160,7 +211,7 @@ static func decode(bytes: PackedByteArray) -> PackedFloat32Array:
 @rpc("any_peer", "call_remote", "unreliable_ordered")
 func _rpc_voice(bytes: PackedByteArray) -> void:
 	var from := multiplayer.get_remote_sender_id()
-	if bytes.size() > MAX_PACKET or from == 0:
+	if not Net.allows_voice() or not Net.in_match or bytes.is_empty() or bytes.size() > MAX_PACKET or from == 0:
 		return
 	frames_received[from] = int(frames_received.get(from, 0)) + bytes.size()
 	if GameManager.get_setting("voice_mute_others"):
@@ -194,8 +245,10 @@ func _speaker_for(peer: int) -> AudioStreamPlayer2D:
 		s = AudioStreamPlayer2D.new()
 		s.name = "Voice"
 		var gen := AudioStreamGenerator.new()
+		gen.mix_rate_mode = AudioStreamGenerator.MIX_RATE_CUSTOM
 		gen.mix_rate = _rate
 		gen.buffer_length = 0.4
+		s.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
 		s.stream = gen
 		s.bus = OUT_BUS
 		s.max_distance = cfg.voice_max_distance

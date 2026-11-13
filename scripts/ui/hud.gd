@@ -9,7 +9,7 @@ const WEAPON_REGIONS := {
 	&"shotgun": Rect2(101, 13, 22, 8),
 	&"knife": Rect2(105, 46, 14, 6),
 }
-const FOOT_CONTROLS := "WASD Move · Shift Sprint · C Crouch · LMB Attack · V Swap · R Reload · E Use · F Light · T Talk"
+const FOOT_CONTROLS := "WASD Move · Shift Sprint · C Crouch · LMB Attack · V Cycle · R Reload · E Use · F Light"
 const CAR_CONTROLS := "WASD Drive · Space Handbrake · Q Shove · H Horn · E Exit"
 
 var _car: Car
@@ -253,6 +253,8 @@ func _refresh_weapon() -> void:
 	_weapon_icon.region = WEAPON_REGIONS.get(id, WEAPON_REGIONS[&"pistol"])
 	%WeaponIcon.texture = weapon.stats.pickup_icon if not weapon.knife_equipped and weapon.stats.pickup_icon else _weapon_icon
 	weapon_name.text = "Knife" if weapon.knife_equipped else weapon.stats.display_name
+	if not weapon.knife_equipped and weapon.gun_slot_count() > 1:
+		weapon_name.text = "%d/%d · %s" % [weapon.active_gun_slot(), weapon.gun_slot_count(), weapon_name.text]
 	if weapon.knife_equipped:
 		ammo.text = "Melee"
 	else:

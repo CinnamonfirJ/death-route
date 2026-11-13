@@ -62,14 +62,15 @@ func _ready() -> void:
 
 func _show_scores() -> void:
 	_open("LOCAL LEADERBOARD")
-	_copy("Successful deliveries ranked by scrap, then kills.")
+	_copy("Completed routes ranked by scrap, then kills.")
 	if GameManager.run_scores.is_empty():
 		_copy("Complete a delivery to set your first score.")
 	for i in GameManager.run_scores.size():
 		var score: Dictionary = GameManager.run_scores[i]
 		var route: Dictionary = GameManager.LOCATIONS.get(StringName(score.location), {})
 		var row := HBoxContainer.new()
-		var label := _label("%02d  %s" % [i + 1, route.get("name", "Delivery")], 10, CREAM)
+		var saved_name := str(score.get("name", GameManager.display_name()))
+		var label := _label("%02d  %s\n%s" % [i + 1, saved_name, route.get("name", "Delivery")], 10, CREAM)
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(label)

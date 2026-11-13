@@ -45,6 +45,9 @@ var _switch_left := 0.0
 var _switch_tween: Tween
 var _starting_id: StringName
 var _stored_condition := 1.0
+var _guns: Array[Dictionary] = [{}]
+var _gun_slot := 0
+var _starting_slot := 0
 var display_id: StringName = &"pistol":
 	set(value):
 		display_id = value
@@ -81,26 +84,74 @@ func equip(base: WeaponStats) -> void:
 
 
 func equip_found(id: StringName) -> void:
-	if stats.weapon_id == _starting_id:
-		_stored_condition = durability
+	var slot := _gun_slot
+	if _guns.size() == 1:
+		_save_gun()
+		slot = 1
+		_guns.append({})
+	elif knife_equipped:
+		slot = 1
+	if slot != _gun_slot:
+		_save_gun()
+	if slot == _starting_slot:
+		_stored_condition = durability if slot == _gun_slot else float(_guns[slot]["durability"])
+		_starting_slot = -1
+	_gun_slot = slot
 	equip(load(FIELD_WEAPONS[id]))
+	_cooldown = 0.0
 	knife_equipped = false
+	_save_gun()
+
+
+func gun_slot_count() -> int:
+	return _guns.size()
+
+
+func active_gun_slot() -> int:
+	return _gun_slot + 1
+
+
+func _save_gun() -> void:
+	_guns[_gun_slot] = {"stats": stats, "mag": in_mag, "reserve": reserve, "durability": durability}
+
+
+func _select_gun(slot: int) -> void:
+	if slot != _gun_slot:
+		_save_gun()
+		_gun_slot = slot
+		var stored := _guns[slot]
+		stats = stored["stats"]
+		in_mag = stored["mag"]
+		reserve = stored["reserve"]
+		durability = stored["durability"]
+		display_id = stats.weapon_id
+	knife_equipped = false
+	_emit_ammo()
 
 
 func loadout_condition() -> float:
-	return durability if stats.weapon_id == _starting_id else _stored_condition
+	if _starting_slot == -1:
+		return _stored_condition
+	if _starting_slot == _gun_slot:
+		return durability
+	return float(_guns[_starting_slot]["durability"])
 
 
 func started_with() -> StringName:
 	return _starting_id
 
 
-## Swap between gun and knife with a short holster animation (MatchConfig.weapon_switch_time).
+## Cycle occupied gun slots and the knife with a short holster animation.
 func request_switch() -> void:
 	if _switch_left > 0.0 or is_reloading:
 		return
 	_switch_left = MatchConfig.get_config().weapon_switch_time
-	knife_equipped = not knife_equipped
+	if knife_equipped:
+		_select_gun(0)
+	elif _gun_slot + 1 < _guns.size():
+		_select_gun(_gun_slot + 1)
+	else:
+		knife_equipped = true
 	_play_switch()
 	if Net.is_online():
 		_rpc_switch_fx.rpc()
@@ -335,7 +386,7 @@ func _fx_parent() -> Node:
 
 
 func start_reload() -> void:
-	if is_reloading or is_zero_approx(durability) or reserve <= 0 or in_mag >= stats.mag_size:
+	if knife_equipped or is_reloading or is_zero_approx(durability) or reserve <= 0 or in_mag >= stats.mag_size:
 		return
 	is_reloading = true
 	_reload_left = stats.reload_time

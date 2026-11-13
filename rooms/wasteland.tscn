@@ -62,6 +62,8 @@ region = Rect2(256, 128, 32, 32)
 [node name="Wasteland" type="Node2D" unique_id=933922986]
 script = ExtResource("1_va3cw")
 location_name = "Route 9 Gas & Junk"
+depot_position = Vector2(624, 1280)
+extra_customer_positions = Array[Vector2]([Vector2(1040, 496), Vector2(1808, 752)])
 
 [node name="Ground" type="TileMapLayer" parent="." unique_id=155838029]
 modulate = Color(0.75, 0.61, 0.52, 1)

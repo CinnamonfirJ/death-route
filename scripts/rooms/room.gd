@@ -24,6 +24,10 @@ var _crew_starts: Array[Vector2] = []
 ## Shared actors: [scene_path, props]. Spawned by _spawn_dynamic()
 ## (immediately offline; by the host once everyone has loaded, online).
 var _dynamic: Array = []
+var _field_weapons: Array[Dictionary] = []
+var _pool_loot: Dictionary = {}
+
+@export_range(0.0, 1.0) var acid_loot_chance := 0.4
 
 
 func _build_world() -> void:
@@ -60,8 +64,18 @@ func _read_marker(m: RoomMarker) -> void:
 				RoomMarker.Kind.FUEL: Pickup.Kind.FUEL, RoomMarker.Kind.MEDKIT: Pickup.Kind.MEDKIT,
 				RoomMarker.Kind.FLARE_PISTOL: Pickup.Kind.FLARE_PISTOL,
 				RoomMarker.Kind.NEEDLE_SMG: Pickup.Kind.NEEDLE_SMG}[m.kind]
-			_dynamic.append([Pickup.SCENE_PATH, {"kind": k, "amount": m.pickup_amount(),
-				"lifetime": 0.0, "position": pos, "anchored": m.anchored}])
+			var props := {"kind": k, "amount": m.pickup_amount(),
+				"lifetime": 0.0, "position": pos, "anchored": m.anchored}
+			if k in [Pickup.Kind.FLARE_PISTOL, Pickup.Kind.NEEDLE_SMG]:
+				_field_weapons.append(props)
+			else:
+				var hazard := _pool_at(pos)
+				if hazard:
+					if not _pool_loot.has(hazard):
+						_pool_loot[hazard] = []
+					_pool_loot[hazard].append(props)
+				else:
+					_dynamic.append([Pickup.SCENE_PATH, props])
 		_:
 			pass  # zombie/car spawns join their groups themselves
 
@@ -74,6 +88,28 @@ func map_rect() -> Rect2:
 func _spawn_dynamic() -> void:
 	for entry in _dynamic:
 		Net.spawn(entities, entry[0], entry[1])
+	for hazard in _pool_loot:
+		if randf() < acid_loot_chance:
+			var props: Dictionary = _pool_loot[hazard].pick_random()
+			Net.spawn(entities, Pickup.SCENE_PATH, props)
+	if MatchState.active:
+		return  # Versus supplies its own weapons through MatchState.
+	var spots := _pizza_spots.duplicate()
+	spots.shuffle()
+	if _field_weapons.is_empty():
+		_field_weapons.assign([{"kind": Pickup.Kind.FLARE_PISTOL}, {"kind": Pickup.Kind.NEEDLE_SMG}])
+	for props in _field_weapons:
+		props["position"] = _take_route_spot(spots, 95.0)
+		props["lifetime"] = 0.0
+		props["anchored"] = true
+		Net.spawn(entities, Pickup.SCENE_PATH, props)
+
+
+func _pool_at(point: Vector2) -> Node2D:
+	for pool in get_tree().get_nodes_in_group(&"acid_pool"):
+		if is_ancestor_of(pool) and pool.contains(point):
+			return pool
+	return null
 
 
 func _survivor_spots() -> Array[Vector2]:

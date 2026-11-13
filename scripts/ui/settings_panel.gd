@@ -65,16 +65,6 @@ func _ready() -> void:
 	_slider("Sound effects", "sfx_volume", 0.0, 1.0)
 	_slider("Music volume", "music_volume", 0.0, 1.0)
 	_slider("Screen shake", "screen_shake", 0.0, 1.5)
-	_toggle("Voice chat mic", "voice_enabled", "Lets nearby players hear you in online matches. Off by default.")
-	var voice_mode := OptionButton.new()
-	voice_mode.name = "VoiceMode"
-	voice_mode.add_item("Mic  /  Push to talk (hold T)")
-	voice_mode.add_item("Mic  /  Open mic (voice activated)")
-	voice_mode.select(1 if GameManager.get_setting("voice_mode") == "open" else 0)
-	voice_mode.item_selected.connect(func(i: int) -> void:
-		GameManager.set_setting("voice_mode", "push" if i == 0 else "open"))
-	TouchLayout.button(voice_mode)
-	add_child(voice_mode)
 	_slider("Voice volume", "voice_volume", 0.0, 1.0)
 	_toggle("Mute other players", "voice_mute_others", "Silences everyone's voice chat for you.")
 

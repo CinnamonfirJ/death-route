@@ -25,7 +25,7 @@ const NOISE_FLUSH := 0.1
 var players := {}  # peer id -> {"name", "character", "team": int, "ready": bool}
 ## mode: "coop" (the classic run), "tdm" (Team Deathmatch) or "ffa" (Free For All).
 ## pizza_enemy: what an enemy can do with your pizza in versus ("steal" or "reset").
-var settings := {"location": "hospital", "rival": false, "mode": "coop", "pizza_enemy": "steal"}
+var settings := {"location": "hospital", "rival": false, "mode": "coop", "pizza_enemy": "steal", "voice": true}
 const MODES := ["coop", "tdm", "ffa"]
 const MODE_NAMES := {"coop": "Co-op Run", "tdm": "Team Deathmatch", "ffa": "Free For All"}
 var role := "crew"  # "crew" or "rival" (only the rival's own machine knows)
@@ -136,6 +136,10 @@ func peer_name(id: int) -> String:
 
 
 ## Versus (TDM / FFA) is on for this lobby / match.
+func allows_voice() -> bool:
+	return is_online() and bool(settings.get("voice", true))
+
+
 func is_versus() -> bool:
 	return is_online() and settings.get("mode", "coop") in ["tdm", "ffa"]
 
@@ -271,10 +275,10 @@ func _spawn_from_data(data: Dictionary) -> Node:
 
 # ---------- Lobby ----------
 
-func create_room(public_room: bool, location: StringName) -> Error:
+func create_room(public_room: bool, location: StringName, allow_voice := true) -> Error:
 	leave()
 	room_public = public_room
-	settings = {"location": String(location), "rival": false, "mode": "coop", "pizza_enemy": "steal"}
+	settings = {"location": String(location), "rival": false, "mode": "coop", "pizza_enemy": "steal", "voice": allow_voice}
 	return _open_room("create=1&public=%d&name=%s&location=%s" % [
 		int(public_room), my_name.uri_encode(), String(location).uri_encode()])
 
@@ -312,6 +316,7 @@ func _open_room(query: String) -> Error:
 ## Direct connection is retained for local integration tests and tools.
 func host(port := DEFAULT_PORT) -> Error:
 	leave()
+	settings["voice"] = true
 	var peer := WebSocketMultiplayerPeer.new()
 	var err := peer.create_server(port)
 	if err != OK:

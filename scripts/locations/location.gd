@@ -19,6 +19,8 @@ const BRUTE := preload("res://scenes/zombies/brute.tscn")
 const CAR_SCENE := preload("res://scenes/car/car.tscn")
 const BARREL_SCENE := preload("res://scenes/props/explosive_barrel.tscn")
 const COMPANION_SCENE := preload("res://scenes/companions/companion.tscn")
+const CUSTOMER_SCENE := preload("res://scenes/locations/delivery_customer.tscn")
+const PIZZA_SHOP := preload("res://scripts/locations/pizza_shop.gd")
 const PIZZA_SCENE := preload("res://scenes/pickups/pizza_cargo.tscn")
 const TILE := 32
 ## Scrap per healthy survivor delivered / per infected one (the camp has a bad night).
@@ -38,7 +40,18 @@ const INFECTED_PENALTY := 20
 var tasks: Array[HoldTask] = []
 var _rival_note := ""
 var _delivered_survivors: Array[Companion] = []
+@export_group("Delivery route")
+@export var depot_position := Vector2.ZERO
+@export var extra_customer_positions: Array[Vector2] = []
+@export var job_discovery_radius := 260.0
+@export var job_spacing := 125.0
+
 var pizza: PizzaCargo
+var pizzas: Array[PizzaCargo] = []
+var _depot: StaticBody2D
+var _known_jobs: Array[HoldTask] = []
+var _layout_ready := false
+var _reserved_spots: Array[Vector2] = []
 
 @onready var ground: TileMapLayer = $Ground
 @onready var roads: TileMapLayer = $Roads
@@ -59,20 +72,25 @@ func _ready() -> void:
 	var road: ShaderMaterial = dirt.duplicate()
 	road.set_shader_parameter(&"road_surface", true)
 	roads.material = road
+	if not Net.is_versus():
+		_depot = PIZZA_SHOP.new()
+		_depot.name = "PizzaCo"
+		_depot.route = self
+		_depot.position = depot_position if depot_position != Vector2.ZERO else player.position + Vector2(-120, 20)
+		entities.add_child(_depot)
 	_build_bounds(map_rect())
 	_build_navigation(map_rect())
 	var camera := get_node_or_null(^"GameCamera") as GameCamera
 	if camera:
 		camera.set_play_bounds(map_rect())
-	var lighting := RoomLighting.new()
-	lighting.name = "RoomLighting"
-	add_child(lighting)
-	lighting.configure(self)
-	pizza = PIZZA_SCENE.instantiate()
-	pizza.customer = customer
-	customer.pizza = pizza
-	entities.add_child(pizza)
-	pizza.changed.connect(_on_pizza_changed)
+	pizza = _add_order(customer, 1)
+	if not Net.is_versus():
+		for i in extra_customer_positions.size():
+			var stop: DeliveryCustomer = CUSTOMER_SCENE.instantiate()
+			stop.name = "DeliveryCustomer_%d" % (i + 2)
+			stop.position = extra_customer_positions[i]
+			entities.add_child(stop)
+			_add_order(stop, i + 2)
 	if Net.is_versus():
 		# Versus: every team gets its own pizza + drop-off (MatchState); the shared ones sit out.
 		MatchState.begin(self)
@@ -82,6 +100,10 @@ func _ready() -> void:
 		pizza.visible = false
 		pizza.process_mode = Node.PROCESS_MODE_DISABLED
 		$NoiseDirector.wave_size_mult *= MatchState.cfg.versus_wave_mult
+	var lighting := RoomLighting.new()
+	lighting.name = "RoomLighting"
+	add_child(lighting)
+	lighting.configure(self)
 	if GameManager.phase != GameManager.Phase.RUN:
 		GameManager.start_run(location_id)  # launched directly from the editor
 	EventBus.player_died.connect(_on_player_died)
@@ -89,9 +111,7 @@ func _ready() -> void:
 	if Net.is_online():
 		_setup_online()
 	else:
-		_spawn_dynamic()
-		_spawn_companions()  # AI companions are single-player; human allies replace them online
-		_place_pizza()
+		_start_delivery_layout()
 	EventBus.hud_message.emit.call_deferred(location_name)
 
 
@@ -125,9 +145,10 @@ func _on_all_peers_ready() -> void:
 				"position": MatchState.spawn_point(id) if MatchState.active else _guest_start(i),
 				"character_id": Net.peer_character(id)})
 		i += 1
-	_spawn_dynamic()
-	if not MatchState.active:
-		_place_pizza()
+	if MatchState.active:
+		_spawn_dynamic()
+	else:
+		_start_delivery_layout()
 
 
 func _exit_tree() -> void:
@@ -145,12 +166,29 @@ func _spawn_dynamic() -> void:
 
 
 func can_finish_route() -> bool:
-	return pizza != null and pizza.delivered and GameManager.phase == GameManager.Phase.RUN \
+	return _layout_ready and not MatchState.active and GameManager.phase == GameManager.Phase.RUN \
+		and pizzas.all(func(order: PizzaCargo) -> bool: return order.delivered) \
 		and tasks.all(func(t: HoldTask) -> bool: return t.is_completed)
 
 
-func finish_route() -> void:
-	if not Net.is_sim_authority() or not can_finish_route():
+func request_checkout(courier: Player) -> void:
+	if Net.is_sim_authority():
+		_checkout(courier)
+	else:
+		_rpc_checkout.rpc_id(1)
+
+
+@rpc("any_peer", "reliable")
+func _rpc_checkout() -> void:
+	var peer := multiplayer.get_remote_sender_id()
+	for courier: Player in Net.player_nodes():
+		if courier.get_multiplayer_authority() == peer:
+			_checkout(courier)
+			return
+
+
+func _checkout(courier: Player) -> void:
+	if not Net.is_sim_authority() or not can_finish_route() or not _depot.can_interact(courier):
 		return
 	if Net.is_online():
 		Net.end_run(true)
@@ -205,13 +243,118 @@ func _pizza_spawn_spots() -> Array[Vector2]:
 	return []
 
 
-func _place_pizza() -> void:
-	var spots := _pizza_spawn_spots()
-	if spots.is_empty():
-		push_warning("No pizza spawn spots in %s" % location_id)
-		pizza.place(player.global_position + Vector2(0, 32))
-		return
-	pizza.place(spots.pick_random())
+func _add_order(stop: DeliveryCustomer, number: int) -> PizzaCargo:
+	var order: PizzaCargo = PIZZA_SCENE.instantiate()
+	order.name = "PizzaOrder_%d" % number
+	order.number = number
+	order.customer = stop
+	stop.pizza = order
+	entities.add_child(order)
+	pizzas.append(order)
+	order.changed.connect(_on_pizza_changed.bind(order))
+	return order
+
+
+func _start_delivery_layout() -> void:
+	# Nav maps can still contain the previous scene until the physics server flushes it.
+	var nav := nav_region.get_navigation_map()
+	for tick in 12:
+		await get_tree().physics_frame
+		var region := nav_region.get_region_rid()
+		if NavigationServer2D.region_get_iteration_id(region) == 0:
+			continue
+		var path := NavigationServer2D.map_get_path(nav, player.global_position, _depot.global_position, true)
+		if not path.is_empty() and path[-1].distance_to(_depot.global_position) < 8.0:
+			break
+	var spots: Array[Vector2] = _pizza_spawn_spots().duplicate()
+	spots.shuffle()
+	var grid := _route_grid()
+	var job_positions := PackedVector2Array()
+	for task in tasks:
+		var point := task.global_position
+		for candidate in grid:
+			if candidate.distance_to(point) >= job_spacing and _clear_route_spot(candidate, 44.0, job_spacing):
+				point = candidate
+				break
+		_reserved_spots.append(point)
+		job_positions.append(point)
+	for order in pizzas:
+		var point := _take_route_spot(spots, 85.0)
+		order.place(point)
+	_spawn_dynamic()
+	if Net.is_online():
+		_apply_job_positions.rpc(job_positions)
+	else:
+		_apply_job_positions(job_positions)
+	if not Net.is_online():
+		_spawn_companions()
+
+
+@rpc("authority", "call_local", "reliable")
+func _apply_job_positions(positions: PackedVector2Array) -> void:
+	for i in tasks.size():
+		tasks[i].global_position = positions[i]
+	_build_navigation(map_rect())
+	_layout_ready = true
+	_update_objective()
+
+
+func _clear_route_spot(point: Vector2, radius: float, spacing: float) -> bool:
+	if not map_rect().grow(-radius - 16.0).has_point(point):
+		return false
+	if point.distance_to(player.global_position) < 105.0 or point.distance_to(start_car.global_position) < radius + 38.0:
+		return false
+	for order in pizzas:
+		if point.distance_to(order.customer.global_position) < radius + 44.0:
+			return false
+	for reserved in _reserved_spots:
+		if point.distance_to(reserved) < spacing:
+			return false
+	for pool in get_tree().get_nodes_in_group(&"acid_pool"):
+		if pool.contains(point, radius + 6.0):
+			return false
+	var shape := CircleShape2D.new()
+	shape.radius = radius
+	var query := PhysicsShapeQueryParameters2D.new()
+	query.shape = shape
+	query.transform = Transform2D(0.0, point)
+	query.collision_mask = 1 | 128
+	if not get_world_2d().direct_space_state.intersect_shape(query, 1).is_empty():
+		return false
+	var nav := nav_region.get_navigation_map()
+	var path := NavigationServer2D.map_get_path(nav, player.global_position, point, true)
+	return not path.is_empty() and path[-1].distance_to(point) < 5.0
+
+
+func _take_route_spot(spots: Array[Vector2], spacing: float) -> Vector2:
+	for point in spots:
+		if _clear_route_spot(point, 14.0, spacing):
+			_reserved_spots.append(point)
+			spots.erase(point)
+			return point
+	# Search the map in random order if the hand-placed spots are unavailable.
+	var grid := _route_grid()
+	for point in grid:
+		if _clear_route_spot(point, 14.0, spacing):
+			_reserved_spots.append(point)
+			return point
+	# Last resort for custom maps: reuse a clear spot close to the starting lane.
+	for point in grid:
+		if _clear_route_spot(point, 10.0, 20.0):
+			_reserved_spots.append(point)
+			return point
+	push_warning("No reachable loot spot on %s" % location_id)
+	return player.global_position
+
+
+func _route_grid() -> Array[Vector2]:
+	var grid: Array[Vector2] = []
+	var rect := map_rect()
+	for x in range(int(rect.position.x) + 72, int(rect.end.x) - 72, 64):
+		for y in range(int(rect.position.y) + 72, int(rect.end.y) - 72, 64):
+			grid.append(Vector2(x, y))
+	grid.shuffle()
+	return grid
 
 
 # ---------- Jobs + objective ----------
@@ -221,7 +364,6 @@ func _setup_tasks() -> void:
 		if n is HoldTask:
 			tasks.append(n)
 			n.completed.connect(_on_task_completed)
-			EventBus.waypoint_set.emit.call_deferred(n, n.waypoint_label)
 	_update_objective.call_deferred()
 
 
@@ -230,46 +372,62 @@ func _on_task_completed(task: HoldTask) -> void:
 	_update_objective()
 
 
+func _physics_process(_delta: float) -> void:
+	if not _layout_ready or MatchState.active or _known_jobs.size() == tasks.size():
+		return
+	var courier := Net.local_player() as Player
+	if courier == null:
+		return
+	var changed := false
+	for task in tasks:
+		if not task.is_completed and not _known_jobs.has(task) \
+				and courier.global_position.distance_squared_to(task.global_position) <= job_discovery_radius * job_discovery_radius:
+			_known_jobs.append(task)
+			EventBus.waypoint_set.emit(task, task.waypoint_label)
+			changed = true
+	if changed:
+		_update_objective()
+
+
 func _update_objective() -> void:
-	if MatchState.active:
+	if Net.is_versus():
 		MatchState._refresh_hud()
 		return
+	var delivered := pizzas.filter(func(order: PizzaCargo) -> bool: return order.delivered).size()
+	var carrying := pizzas.filter(func(order: PizzaCargo) -> bool: return order.carrier_id == Net.local_id()).size()
+	EventBus.pizza_status_changed.emit("Orders %d/%d · Carrying %d" % [delivered, pizzas.size(), carrying])
+	if can_finish_route():
+		_depot.unlock()
+		EventBus.waypoint_set.emit(_depot, "PIZZA CO.")
+		EventBus.objective_changed.emit("Return to Pizza Co. to clock out")
+		return
 	var lines: Array[String] = []
-	if pizza.delivered:
-		EventBus.pizza_status_changed.emit("Pizza delivered")
-		if can_finish_route():
-			lines.append("Finish route from the pause menu" if Net.is_sim_authority()
-				else "The host can finish the route")
-	elif pizza.carrier_id != 0:
-		var carrier := "You have the pizza" if pizza.carrier_id == Net.local_id() \
-			else "%s has the pizza" % Net.peer_name(pizza.carrier_id)
-		EventBus.pizza_status_changed.emit(carrier)
-		lines.append("Bring the pizza to the customer")
-	else:
-		EventBus.pizza_status_changed.emit("Pizza missing")
-		lines.append("Search the area for the pizza")
+	if delivered < pizzas.size():
+		lines.append("Deliver the pizzas to the customers" if carrying > 0 else "Search for pizza orders")
 	for t in tasks:
-		lines.append(("[x] " if t.is_completed else "[ ] ") + t.task_name)
+		var hint := "" if t.is_completed or _known_jobs.has(t) else " (search)"
+		lines.append(("[x] " if t.is_completed else "[ ] ") + t.task_name + hint)
 	EventBus.objective_changed.emit("\n".join(lines))
 
 
-func _on_pizza_changed() -> void:
-	if pizza.delivered:
-		EventBus.waypoint_cleared.emit(customer)
-		customer.receive_pizza()
-		EventBus.hud_message.emit("Customer: Thanks for the pizza!")
+func _on_pizza_changed(order: PizzaCargo) -> void:
+	var stop := order.customer as DeliveryCustomer
+	if order.delivered:
+		EventBus.waypoint_cleared.emit(stop)
+		stop.receive_pizza()
+		EventBus.hud_message.emit("Order %d delivered. Enjoy!" % order.number)
 		if not Net.is_online():
-			_record_survivors_at_customer()
-	elif pizza.carrier_id != 0:
-		EventBus.waypoint_set.emit(customer, "CUSTOMER")
+			_record_survivors_at_customer(stop)
+	elif order.carrier_id != 0:
+		EventBus.waypoint_set.emit(stop, "ORDER %d" % order.number)
 	else:
-		EventBus.waypoint_cleared.emit(customer)
+		EventBus.waypoint_cleared.emit(stop)
 	_update_objective()
 
 
-func _record_survivors_at_customer() -> void:
+func _record_survivors_at_customer(stop: DeliveryCustomer) -> void:
 	for c: Companion in get_tree().get_nodes_in_group(&"companions"):
-		if c.is_in_party() and c.global_position.distance_to(customer.global_position) <= 100.0:
+		if not _delivered_survivors.has(c) and c.is_in_party() and c.global_position.distance_to(stop.global_position) <= 100.0:
 			_delivered_survivors.append(c)
 
 
@@ -290,7 +448,7 @@ func _on_player_died() -> void:
 func _finish(success: bool, extra_in := {}) -> void:
 	var me: Player = Net.local_player()
 	var extra := {"survivors": 0, "infected_delivered": 0, "location": String(location_id),
-		"pizza_delivered": pizza.delivered}
+		"pizza_delivered": pizzas.all(func(order: PizzaCargo) -> bool: return order.delivered)}
 	extra.merge(extra_in, true)
 	if success:
 		for c in _delivered_survivors:

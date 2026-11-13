@@ -8,6 +8,7 @@ const LOBBY_LOCATIONS := [&"hospital", &"camp", &"wasteland"]
 var _name_edit: LineEdit
 var _code_edit: LineEdit
 var _public: CheckButton
+var _allow_voice: CheckButton
 var _browser: VBoxContainer
 var _rooms: ItemList
 var _directory_status: Label
@@ -244,6 +245,11 @@ func _add_browser(parent: Control) -> void:
 	create.add_child(_public)
 	_host_btn = _button(create, "CREATE ROOM", _on_host)
 	TitleStyle.primary(_host_btn)
+	_allow_voice = CheckButton.new()
+	_allow_voice.text = "Allow proximity voice"
+	_allow_voice.button_pressed = true
+	TouchLayout.button(_allow_voice, 13, 34)
+	_browser.add_child(_allow_voice)
 
 	var join := HBoxContainer.new()
 	_browser.add_child(join)
@@ -331,7 +337,7 @@ func _set_name() -> void:
 func _on_host() -> void:
 	if not Net.is_online() and not Net.room_connecting():
 		_set_name()
-		Net.create_room(_public.button_pressed, GameManager.selected_location)
+		Net.create_room(_public.button_pressed, GameManager.selected_location, _allow_voice.button_pressed)
 
 
 func _on_join() -> void:
@@ -383,6 +389,7 @@ func _refresh() -> void:
 		elif Net.settings.rival:
 			extra = "   ·   Secret rival ON"
 		lines.append("Mode: %s   ·   Map: %s%s" % [Net.MODE_NAMES[mode], loc.get("name", "?"), extra])
+		lines.append("Proximity voice: %s" % ("Allowed" if Net.allows_voice() else "Off"))
 	_roster.text = "\n".join(lines)
 	_roster.visible = online
 	_browser.visible = not online

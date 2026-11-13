@@ -108,9 +108,13 @@ func can_interact(player: Node) -> bool:
 		and global_position.distance_to(player.global_position) <= swap_reach
 
 
-func get_interact_prompt(_player: Node) -> String:
+func get_interact_prompt(player: Node) -> String:
 	var config: WeaponStats = load(Weapon.FIELD_WEAPONS[FIELD_IDS[kind]])
-	return "[E] Swap for %s · %s" % [config.display_name, config.ammo_name]
+	var weapon: Weapon = player.weapon
+	if weapon.gun_slot_count() < 2:
+		return "[E] Pick up %s · %s" % [config.display_name, config.ammo_name]
+	var slot := 2 if weapon.knife_equipped else weapon.active_gun_slot()
+	return "[E] Replace gun %d with %s" % [slot, config.display_name]
 
 
 func interact(player: Node) -> void:

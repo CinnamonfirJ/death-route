@@ -65,7 +65,7 @@ const DEFAULT_SETTINGS := {
 	"lighting_mode": "night",
 	"room_brightness": 0.5,
 	"touch_shooting": "drag",
-	"voice_enabled": false, "voice_mode": "push", "voice_volume": 0.8, "voice_mute_others": false,
+	"voice_volume": 0.8, "voice_mute_others": false,
 }
 var settings := DEFAULT_SETTINGS.duplicate()
 
@@ -167,7 +167,8 @@ func end_run(success: bool, weapon_durability_now := -1.0, extra := {}, starting
 	if success:
 		stats.successful_runs += 1
 		stats.best_run_scrap = maxi(int(stats.best_run_scrap), earned)
-		run_scores.append({"location": String(_run_location), "scrap": earned, "kills": run_kills})
+		run_scores.append({"name": display_name(), "location": String(_run_location),
+			"scrap": earned, "kills": run_kills})
 		run_scores.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 			if a.scrap == b.scrap:
 				return a.kills > b.kills

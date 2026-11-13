@@ -65,6 +65,8 @@ region = Rect2(80, 676, 65, 33)
 [node name="Camp" type="Node2D" unique_id=78092409]
 script = ExtResource("1_0wf0i")
 location_id = &"camp"
+depot_position = Vector2(730, 1234)
+extra_customer_positions = Array[Vector2]([Vector2(720, 368), Vector2(1456, 816)])
 location_name = "Survivor Camp"
 
 [node name="Ground" type="TileMapLayer" parent="." unique_id=1387332109]

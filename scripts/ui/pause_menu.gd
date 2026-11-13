@@ -4,7 +4,8 @@ extends CanvasLayer
 
 var _root: Control
 var _dim: ColorRect
-var _finish_button: Button
+var _mic: CheckButton
+var _voice_status: Label
 var _panel: PanelContainer
 
 
@@ -29,6 +30,18 @@ func _ready() -> void:
 	title.text = "PAUSED" if not Net.is_online() else "MENU (game keeps running)"
 	title.add_theme_font_size_override(&"font_size", 16)
 	v.add_child(title)
+	if Net.is_online():
+		_mic = CheckButton.new()
+		_mic.text = "Proximity microphone"
+		TouchLayout.button(_mic, 14, 34)
+		_mic.disabled = not Net.allows_voice()
+		_mic.toggled.connect(Voice.set_microphone)
+		v.add_child(_mic)
+		_voice_status = Label.new()
+		_voice_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(_voice_status)
+		Voice.microphone_changed.connect(_refresh_voice)
+		_refresh_voice()
 	TouchLayout.scroll(v).add_child(SettingsPanel.new())
 	var resume := Button.new()
 	resume.name = "Resume"
@@ -37,14 +50,6 @@ func _ready() -> void:
 	TitleStyle.primary(resume)
 	resume.pressed.connect(close)
 	v.add_child(resume)
-	_finish_button = Button.new()
-	_finish_button.name = "FinishRoute"
-	_finish_button.text = "Finish route"
-	TouchLayout.button(_finish_button, 14, 34)
-	_finish_button.hide()
-	_finish_button.pressed.connect(_finish_route)
-	v.add_child(_finish_button)
-	EventBus.objective_changed.connect(func(_text: String) -> void: _refresh_finish_button())
 	var quit := Button.new()
 	quit.name = "Abandon"
 	quit.text = "Abandon run (keep half scrap)"
@@ -86,7 +91,7 @@ func open() -> void:
 	if summary and summary.visible:
 		return  # run's already over
 	visible = true
-	_refresh_finish_button()
+	_refresh_voice()
 	if not Net.is_online():
 		get_tree().paused = true
 
@@ -97,16 +102,11 @@ func close() -> void:
 		get_tree().paused = false
 
 
-func _refresh_finish_button() -> void:
-	var loc := _level() as Location
-	_finish_button.visible = loc != null and Net.is_sim_authority() and loc.can_finish_route()
-
-
-func _finish_route() -> void:
-	var loc := _level() as Location
-	if loc and loc.can_finish_route():
-		close()
-		loc.finish_route()
+func _refresh_voice() -> void:
+	if _mic == null:
+		return
+	_mic.set_pressed_no_signal(Voice.mic_enabled)
+	_voice_status.text = Voice.mic_status if Net.allows_voice() else "The host disabled voice for this room."
 
 
 func _abandon() -> void:

@@ -86,9 +86,16 @@ func configure(level: Node2D) -> void:
 	for body in level.get_node(^"Entities").find_children("*", "StaticBody2D", true, false):
 		_add_prop_shadow(body)
 		_add_machine_light(body)
-	var delivery := _pool(112.0, 0.91, Color(1.0, 0.78, 0.49))
-	_fixtures.add_child(delivery)
-	delivery.global_position = level.get_node(^"Entities/DeliveryCustomer").global_position
+	for stop in level.get_node(^"Entities").get_children():
+		if stop is DeliveryCustomer and stop.visible:
+			var delivery := _pool(88.0, 0.62, Color("#ffc77d"))
+			_fixtures.add_child(delivery)
+			delivery.global_position = stop.global_position
+	var depot := level.get_node_or_null(^"Entities/PizzaCo") as Node2D
+	if depot:
+		var shop_light := _pool(140.0, 0.90, Color("#ffbc72"))
+		_fixtures.add_child(shop_light)
+		shop_light.global_position = depot.global_position + Vector2(0, -22)
 	_plant_flowers(level.map_rect())
 	GameManager.settings_changed.connect(_apply_mode)
 	_apply_mode()
@@ -184,7 +191,9 @@ func _add_machine_light(body: StaticBody2D) -> void:
 		var source := _pool(generator.generator_light_radius, generator.generator_light_energy,
 			Color("#bbdbff"))
 		_fixtures.add_child(source)
-		source.global_position = body.global_position + generator.generator_light_offset
+		source.global_position = generator.global_position + generator.generator_light_offset
+		generator.generator_started.connect(func() -> void:
+			source.global_position = generator.global_position + generator.generator_light_offset)
 		source.visible = generator.generator_running
 		generator.generator_started.connect(source.show)
 		return
@@ -198,5 +207,7 @@ func _add_machine_light(body: StaticBody2D) -> void:
 			var job := body as HoldTask
 			if job and not job.is_completed:
 				light.hide()
-				job.completed.connect(func(_completed: HoldTask) -> void: light.show())
+				job.completed.connect(func(_completed: HoldTask) -> void:
+					light.global_position = job.global_position + Vector2(0, 18)
+					light.show())
 			return

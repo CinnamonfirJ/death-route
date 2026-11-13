@@ -61,6 +61,79 @@
   <script>
     const insets = document.getElementById("insets");
     const canvas = document.getElementById("canvas");
+    let voiceCapture;
+    window.deadRouteStopVoice = () => {
+      const capture = voiceCapture;
+      voiceCapture = null;
+      if (!capture) return;
+      if (capture.stream) capture.stream.getTracks().forEach(track => track.stop());
+      if (capture.worklet) capture.worklet.port.close();
+      if (capture.context) capture.context.close().catch(() => {});
+    };
+    window.deadRouteStartVoice = async (onFrames, onStatus) => {
+      window.deadRouteStopVoice();
+      const capture = {};
+      voiceCapture = capture;
+      try {
+        const context = new AudioContext();
+        capture.context = context;
+        const resumed = context.resume().catch(() => {});
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {channelCount: 1, echoCancellation: true, noiseSuppression: true}
+        });
+        if (voiceCapture !== capture) {
+          stream.getTracks().forEach(track => track.stop());
+          return;
+        }
+        capture.stream = stream;
+        await resumed;
+        const module = URL.createObjectURL(new Blob([`
+          class VoiceInput extends AudioWorkletProcessor {
+            constructor() {
+              super();
+              this.frames = new Float32Array(1024);
+              this.used = 0;
+            }
+            process(inputs) {
+              const mono = inputs[0][0];
+              if (!mono) return true;
+              for (const sample of mono) {
+                this.frames[this.used++] = sample;
+                if (this.used === this.frames.length) {
+                  this.port.postMessage(this.frames.buffer, [this.frames.buffer]);
+                  this.frames = new Float32Array(1024);
+                  this.used = 0;
+                }
+              }
+              return true;
+            }
+          }
+          registerProcessor("dead-route-voice", VoiceInput);
+        `], {type: "text/javascript"}));
+        try {
+          await context.audioWorklet.addModule(module);
+        } finally {
+          URL.revokeObjectURL(module);
+        }
+        if (voiceCapture !== capture) return;
+        const worklet = new AudioWorkletNode(context, "dead-route-voice", {
+          channelCount: 1, channelCountMode: "explicit", outputChannelCount: [1]
+        });
+        capture.worklet = worklet;
+        const mute = context.createGain();
+        mute.gain.value = 0;
+        worklet.port.onmessage = ({data}) => {
+          if (voiceCapture === capture) onFrames(new Uint8Array(data), context.sampleRate);
+        };
+        context.createMediaStreamSource(stream).connect(worklet).connect(mute).connect(context.destination);
+        onStatus(true);
+      } catch {
+        if (voiceCapture !== capture) return;
+        window.deadRouteStopVoice();
+        onStatus(false);
+      }
+    };
+
     window.deadRouteInsets = () => {
       const style = getComputedStyle(insets);
       const width = Math.max(canvas.clientWidth, 1);
