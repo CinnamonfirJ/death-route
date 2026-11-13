@@ -14,7 +14,7 @@ config/name="Dead Route"
 config/description="Top-down zombie survival delivery roguelite."
 run/main_scene="res://scenes/ui/main_menu.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
-config/icon="res://icon.svg"
+config/icon="res://assets/branding/dead-route-oauth.png"
 
 [audio]
 
