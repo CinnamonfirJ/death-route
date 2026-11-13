@@ -6,12 +6,24 @@ extends Area2D
 ## Online the host owns pickups: it detects who touched one and Net.grant()s the
 ## reward on that player's own machine.
 
-enum Kind { SCRAP, AMMO, FUEL, MEDKIT, FLARE_PISTOL, NEEDLE_SMG }
+## CRATE_* are supply crates: camp market commodities that go into the run haul instead of
+## being used on the spot. Appended at the end so saved marker kinds keep their numbers.
+enum Kind { SCRAP, AMMO, FUEL, MEDKIT, FLARE_PISTOL, NEEDLE_SMG, CRATE_MEDKIT, CRATE_AMMO, CRATE_BATTERY, CRATE_FOOD }
 
 const FIELD_IDS := {Kind.FLARE_PISTOL: &"flare_pistol", Kind.NEEDLE_SMG: &"needle_smg"}
+## Crate kind -> commodity id in economy/pricing_rules.toml.
+const CRATE_COMMODITY := {Kind.CRATE_MEDKIT: "medkit", Kind.CRATE_AMMO: "premium_ammo",
+	Kind.CRATE_BATTERY: "battery", Kind.CRATE_FOOD: "food_stock"}
 
 const ITEM_FOR_KIND := {
 	Kind.SCRAP: "scrap", Kind.AMMO: "ammo_pistol", Kind.FUEL: "fuel_can", Kind.MEDKIT: "medkit",
+	Kind.CRATE_MEDKIT: "chest_red", Kind.CRATE_AMMO: "chest_metal", Kind.CRATE_BATTERY: "battery",
+	Kind.CRATE_FOOD: "chest_green",
+}
+const GLOW_FOR_KIND := {
+	Kind.SCRAP: Color(1, 0.8, 0.35), Kind.AMMO: Color(0.6, 0.8, 1), Kind.FUEL: Color(1, 0.9, 0.3),
+	Kind.MEDKIT: Color(1, 0.4, 0.4), Kind.CRATE_MEDKIT: Color("#e9c46a"), Kind.CRATE_AMMO: Color("#e9c46a"),
+	Kind.CRATE_BATTERY: Color("#e9c46a"), Kind.CRATE_FOOD: Color("#e9c46a"),
 }
 ## Loaded lazily: a preload here would be a cyclic reference (the scene uses this script).
 const SCENE_PATH := "res://scenes/pickups/pickup.tscn"
@@ -35,6 +47,22 @@ static func drop(parent: Node, k: Kind, amt: int, pos: Vector2, life := 30.0) ->
 	var jitter := Vector2(randf_range(-8, 8), randf_range(-8, 8))
 	return Net.spawn(parent, SCENE_PATH, {"kind": k, "amount": amt, "lifetime": life,
 		"position": pos + jitter}) as Pickup
+
+
+static func is_crate(k: int) -> bool:
+	return CRATE_COMMODITY.has(k)
+
+
+## Crate kind for a commodity id; a blank or unknown id picks a random crate.
+static func crate_kind_for(commodity: String) -> int:
+	for k in CRATE_COMMODITY:
+		if CRATE_COMMODITY[k] == commodity:
+			return k
+	return random_crate_kind()
+
+
+static func random_crate_kind() -> int:
+	return CRATE_COMMODITY.keys().pick_random()
 
 
 ## Applies a pickup's effect to `player`. Returns false if it doesn't apply
@@ -61,6 +89,10 @@ static func apply_to(player: Node, k: int, amt: int) -> bool:
 		Kind.FLARE_PISTOL, Kind.NEEDLE_SMG:
 			player.weapon.equip_found(FIELD_IDS[k])
 			float_text(player, player.weapon.stats.display_name, Color("#b9eebb"))
+		Kind.CRATE_MEDKIT, Kind.CRATE_AMMO, Kind.CRATE_BATTERY, Kind.CRATE_FOOD:
+			var id: String = CRATE_COMMODITY[k]
+			GameManager.add_run_commodity(id, amt)
+			float_text(player, "+%d %s · camp market" % [amt, GameManager.commodity_name(id, amt)], Color("#e9c46a"))
 	return true
 
 
@@ -80,9 +112,8 @@ func _ready() -> void:
 	sprite.play(&"default")
 	body_entered.connect(_on_body_entered)
 	Net.attach_sync(self, [".:position"], [])
-	var glow_color: Color = {Kind.SCRAP: Color(1, 0.8, 0.35), Kind.AMMO: Color(0.6, 0.8, 1),
-		Kind.FUEL: Color(1, 0.9, 0.3), Kind.MEDKIT: Color(1, 0.4, 0.4)}[kind]
-	Fx.attach_glow(self, Color(glow_color, 0.35), 0.45, Vector2(0, -6), 0.3)
+	var glow_color: Color = GLOW_FOR_KIND[kind]
+	Fx.attach_glow(self, Color(glow_color, 0.35), 0.55 if is_crate(kind) else 0.45, Vector2(0, -6), 0.3)
 
 
 func _physics_process(delta: float) -> void:

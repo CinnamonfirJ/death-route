@@ -1,0 +1,229 @@
+# Dead Route — Camp Market pricing rules
+#
+# This is the ONLY place the economy is tuned. The wallet bridge loads it at start-up
+# (wallet-bridge/market.mjs) and every price, tooltip line, and bankruptcy decision the
+# player sees comes from these numbers. Nothing here is hidden in code.
+#
+# The formula, in one line:
+#
+#     mid_price = base_price - (inventory - ideal_inventory) * elasticity
+#
+# clamped to [base_price * floor_ratio, base_price * ceiling_ratio]. A merchant BUYS from a
+# courier at mid * (1 - spread) and SELLS to a courier at mid * (1 + spread). Each unit in a
+# batch is priced after the previous unit has moved inventory, so dumping 20 medkits on Doc
+# walks her price down unit by unit (15, 14, 13 ... ) instead of paying 15 for all of them.
+#
+# Merchants earn scrap by selling to the camp population (`daily_use` units a day at the ask
+# price) and pay `daily_upkeep` scrap a day to keep the lights on. Two ways to ruin one:
+#   * flood her with goods: she buys until full, then sells at floor prices that don't cover upkeep;
+#   * hoard her goods and never sell back: empty shelves earn nothing while upkeep keeps coming.
+# When treasury drops under `min_treasury` at the end of a day she is bankrupt and her shop
+# closes until couriers pool `reopen_cost` scrap to reopen it.
+
+[market]
+name = "Survivor Camp Market"
+currency = "scrap"                 # off-chain, lives in the player's local save
+day_length_minutes = 20            # a market "day" in real time while the bridge runs
+quote_ladder = 10                  # how many unit prices the client may preview per side
+
+[pricing]
+floor_ratio = 0.25                 # never below 25% of base
+ceiling_ratio = 3.0                # never above 300% of base
+min_bid = 1                        # a merchant always pays at least 1 scrap if she buys at all
+
+# Inventory bands (inventory / ideal) pick which voice line explains the price.
+[pricing.bands]
+glut = 1.75
+high = 1.25
+low = 0.6
+scarce = 0.3
+
+# ---------------------------------------------------------------------------------------
+# Commodities = NEP-245 token ids. One contract, many token ids, every courier and merchant
+# wallet holds balances of these. `icon` is a key into the game's asset manifest.
+# ---------------------------------------------------------------------------------------
+
+[commodities.medkit]
+token_id = "1"
+name = "Medkit"
+plural = "Medkits"
+icon = "medkit"
+base_price = 15
+decimals = 0
+description = "Field-sealed trauma kit scavenged from a route."
+
+[commodities.premium_ammo]
+token_id = "2"
+name = "Premium Ammo"
+plural = "Premium Ammo"
+icon = "ammo_rifle"
+base_price = 12
+decimals = 0
+description = "Factory rounds, not reloads. Box of twenty."
+
+[commodities.pizza_contract]
+token_id = "3"
+name = "Pizza Delivery Contract"
+plural = "Pizza Delivery Contracts"
+icon = "pizza"
+base_price = 40
+decimals = 0
+description = "Proof that a courier completed a delivery. Minted on route completion, redeemed by dispatch."
+
+[commodities.battery]
+token_id = "4"
+name = "Flashlight Battery"
+plural = "Flashlight Batteries"
+icon = "battery"
+base_price = 8
+decimals = 0
+description = "Still holds a charge. Barely."
+
+[commodities.food_stock]
+token_id = "5"
+name = "Food Stock"
+plural = "Food Stock"
+icon = "cargo_food_stock"
+base_price = 10
+decimals = 0
+description = "Canned, dried, or questionable."
+
+# ---------------------------------------------------------------------------------------
+# Merchants = agent NPCs with their own NEAR wallet (a sub-account of the relayer). They buy
+# and sell autonomously using the formula above. `stock.<commodity>` lists what they deal in.
+# ---------------------------------------------------------------------------------------
+
+[merchants.rusty]
+name = "Rusty"
+title = "Ammo Smuggler"
+account = "rusty"                  # on-chain: rusty.<relayer account>
+treasury = 300                     # starting scrap
+min_treasury = 20                  # below this at day end -> bankrupt
+daily_upkeep = 20                  # rent, guards, bribes
+reopen_cost = 250                  # pooled scrap couriers must invest to reopen
+spread = 0.2
+character = "npc_companion_a"
+
+[merchants.rusty.stock.premium_ammo]
+ideal = 20
+start = 12
+max = 60
+elasticity = 0.4
+daily_use = 4                      # camp buys 4 boxes a day from him
+
+[merchants.rusty.stock.battery]
+ideal = 15
+start = 10
+max = 40
+elasticity = 0.3
+daily_use = 3
+
+[merchants.rusty.voice]
+glut = "My shelves are overflowing with {plural}. Demand is low, take it or leave it."
+high = "I've got plenty of {plural} already. I'll take a few more, cheap."
+balanced = "Fair price for {plural}. That's the going rate at the camp."
+low = "Running short on {plural}. I'll pay a premium today."
+scarce = "I'm out of {plural} and the camp's asking. Name your price. Within reason."
+sold_out = "Fresh out of {plural}. Bring me some and we'll talk."
+broke = "I'm tapped out. Can't pay for {plural} until I sell what I've got."
+closed = "Rusty's shop is boarded up. He went bust buying ammo nobody needed."
+
+[merchants.doc]
+name = "Doc"
+title = "Camp Medic"
+account = "doc"
+treasury = 200
+min_treasury = 20
+daily_upkeep = 25
+reopen_cost = 200
+spread = 0.15
+character = "npc_companion_b"
+
+[merchants.doc.stock.medkit]
+ideal = 12
+start = 8
+max = 40
+elasticity = 0.9                   # medkits swing hard: a few sales move the price a lot
+daily_use = 3
+
+[merchants.doc.voice]
+glut = "The infirmary is stacked to the ceiling with {plural}. I can't pay much."
+high = "I have more {plural} than patients right now. Low offer."
+balanced = "Standard rate for {plural}. Thank you for bringing them in."
+low = "We're short on {plural}. I'll pay over the odds."
+scarce = "People are bleeding and I have no {plural}. Whatever you have, I need it."
+sold_out = "No {plural} left. Please, find some."
+broke = "The clinic is out of scrap. I can't buy {plural} until someone buys treatment."
+closed = "Doc's clinic is closed. Couriers hoarded her supplies and never sold back. She went bankrupt."
+
+[merchants.mama_g]
+name = "Mama G"
+title = "Kitchen & Dispatch"
+account = "mama-g"
+treasury = 400
+min_treasury = 30
+daily_upkeep = 30
+reopen_cost = 300
+spread = 0.1
+character = "npc_companion_b"
+
+[merchants.mama_g.stock.food_stock]
+ideal = 25
+start = 18
+max = 80
+elasticity = 0.25
+daily_use = 6
+
+[merchants.mama_g.stock.pizza_contract]
+ideal = 4
+start = 1
+max = 12
+elasticity = 4.0                   # contracts are scarce and valuable
+daily_use = 1                      # dispatch redeems one contract a day
+
+[merchants.mama_g.voice]
+glut = "Honey, I've got {plural} coming out of my ears. That's all I can offer."
+high = "Plenty of {plural} in the pantry. I'll take them, but not at full price."
+balanced = "That's a fair trade for {plural}. Eat something before you go."
+low = "I'm low on {plural}. Bring more and I'll make it worth your while."
+scarce = "The camp's going hungry without {plural}. I'll pay whatever I've got."
+sold_out = "Pantry's empty for {plural}, sugar."
+broke = "Kitchen's broke until dispatch pays out. Can't take {plural} right now."
+closed = "Mama G's kitchen is dark. No scrap left to pay couriers."
+
+# Default lines used when a merchant has no line for a band.
+[voice]
+glut = "Overstocked on {plural}. Price is down."
+high = "Well stocked on {plural}."
+balanced = "Fair price for {plural}."
+low = "Short on {plural}. Paying more."
+scarce = "Desperate for {plural}."
+sold_out = "Out of {plural}."
+broke = "No scrap to pay for {plural}."
+closed = "Shop closed."
+
+# ---------------------------------------------------------------------------------------
+# Fast-forward (judge mode). Simulates synthetic couriers trading for N days so the
+# economy's long-run behaviour is visible in a minute. Deterministic for a given seed.
+# ---------------------------------------------------------------------------------------
+
+[simulation]
+seed = 7
+days = 7
+couriers_per_day = 6
+# Per courier per day: average units scavenged and sold to the camp, and bought back.
+[simulation.flow.medkit]
+sold = 2.2
+bought = 0.2
+[simulation.flow.premium_ammo]
+sold = 1.5
+bought = 0.6
+[simulation.flow.battery]
+sold = 1.1
+bought = 0.4
+[simulation.flow.food_stock]
+sold = 1.2
+bought = 0.4
+[simulation.flow.pizza_contract]
+sold = 0.35
+bought = 0.0

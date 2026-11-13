@@ -49,7 +49,13 @@ func _ready() -> void:
 	_layout()
 	WalletSession.changed.connect(_refresh)
 	WalletSession.refresh_ownership()
+	EventBus.currency_changed.connect(func(_total: int) -> void: _refresh())
+	CampMarket.start_polling()
 	start_button.grab_focus()
+
+
+func _exit_tree() -> void:
+	CampMarket.stop_polling()
 
 
 ## Header button that opens the shared settings panel in an overlay.
@@ -143,6 +149,10 @@ func _build_tabs() -> void:
 	for category in TAB_NAMES:
 		tabs.add_child(_make_tab(TAB_NAMES[category]))
 	tabs.add_child(_make_tab("Maintenance"))
+	# The camp market tab owns its own refresh (prices arrive from the bridge).
+	var market := _make_tab("Market")
+	market.get_node(^"List").add_child(CampMarketPanel.new())
+	tabs.add_child(market)
 
 
 func _make_tab(tab_name: String) -> ScrollContainer:
@@ -256,7 +266,7 @@ func _maintenance_row(id: StringName) -> Control:
 	var text := VBoxContainer.new()
 	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var head := Label.new()
-	head.text = stats.display_name if available else "%s  (NFT required)" % stats.display_name
+	head.text = stats.display_name if available else "%s  (locked)" % stats.display_name
 	head.add_theme_font_size_override(&"font_size", 10)
 	head.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	var bar := ProgressBar.new()

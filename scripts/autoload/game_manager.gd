@@ -41,6 +41,17 @@ const WEAPONS := {
 ## Scrap to fully repair a weapon from 0% durability.
 const FULL_REPAIR_COST := 60
 
+## Camp market commodities. Each is a NEP-245 token id in economy/pricing_rules.toml; the wallet
+## bridge is the authority on prices and balances. This table only names and draws them so the
+## run summary and Garage work while the bridge is offline.
+const COMMODITIES := {
+	"medkit": {"name": "Medkit", "plural": "Medkits", "icon": "medkit"},
+	"premium_ammo": {"name": "Premium Ammo", "plural": "Premium Ammo", "icon": "ammo_rifle"},
+	"pizza_contract": {"name": "Pizza Delivery Contract", "plural": "Pizza Delivery Contracts", "icon": "pizza"},
+	"battery": {"name": "Flashlight Battery", "plural": "Flashlight Batteries", "icon": "battery"},
+	"food_stock": {"name": "Food Stock", "plural": "Food Stock", "icon": "cargo_food_stock"},
+}
+
 enum Phase { MENU, GARAGE, RUN }
 
 var phase: Phase = Phase.MENU
@@ -56,6 +67,12 @@ var selected_character: StringName = DEFAULT_CHARACTER
 var selected_location: StringName = &"wasteland"
 var stats := { "runs": 0, "successful_runs": 0, "zombies_killed": 0, "best_run_scrap": 0 }
 var run_scores: Array = []
+## Banked camp commodities (commodity id -> count). Mirrors the bridge's balances once it answers.
+var haul: Dictionary = {}
+## Hauls banked while the bridge was unreachable: [{run_id, haul}]. Flushed by CampMarket.
+var pending_hauls: Array = []
+## Stable anonymous id for market trades before (or without) a Google sign-in.
+var guest_id := ""
 
 ## Player options (saved). Auto-aim on by default for casual play; hardcore players switch it off.
 const DEFAULT_SETTINGS := {
@@ -97,6 +114,8 @@ func display_name(fallback := "Courier") -> String:
 # --- Per-run ---
 var run_scrap: int = 0
 var run_kills: int = 0
+## Supply crates picked up this run (commodity id -> count). Banked by end_run().
+var run_haul: Dictionary = {}
 var _run_location: StringName
 ## Summary of the last finished run, shown by the Garage. Empty before the first run.
 var last_run: Dictionary = {}
@@ -108,8 +127,19 @@ func _ready() -> void:
 			save_path = arg.trim_prefix("--save=")
 	catalog = load(CATALOG_PATH)
 	load_game()
+	if guest_id.is_empty():
+		guest_id = _new_guest_id()
+		save_game()
 	EventBus.scrap_collected.connect(_on_scrap_collected)
 	EventBus.zombie_killed.connect(_on_zombie_killed)
+
+
+func _new_guest_id() -> String:
+	const ALPHABET := "abcdefghijklmnopqrstuvwxyz0123456789"
+	var out := ""
+	for i in 24:
+		out += ALPHABET[randi() % ALPHABET.length()]
+	return out
 
 
 # ---------- Scene flow ----------
@@ -152,6 +182,7 @@ func start_run(location_id: StringName) -> void:
 	_run_location = location_id
 	run_scrap = 0
 	run_kills = 0
+	run_haul = {}
 	EventBus.run_started.emit(location_id)
 
 
@@ -178,17 +209,83 @@ func end_run(success: bool, weapon_durability_now := -1.0, extra := {}, starting
 	var run_weapon := starting_weapon if WEAPONS.has(starting_weapon) else loadout_weapon
 	if weapon_durability_now >= 0.0:
 		weapon_durability[String(run_weapon)] = weapon_durability_now
+	# Camp commodities: everything on success, half on failure. A finished delivery also mints
+	# one Pizza Delivery Contract, the proof-of-delivery token dispatch pays for.
+	var banked := {}
+	for id in run_haul:
+		var n: int = int(run_haul[id]) if success else floori(int(run_haul[id]) / 2.0)
+		if n > 0:
+			banked[id] = n
+	if success and extra.get("pizza_delivered", false):
+		banked["pizza_contract"] = int(banked.get("pizza_contract", 0)) + 1
+	for id in banked:
+		haul[id] = int(haul.get(id, 0)) + int(banked[id])
 	last_run = {
 		"success": success, "scrap_found": run_scrap, "scrap_banked": earned,
 		"kills": run_kills, "weapon": String(run_weapon),
-		"durability": get_durability(run_weapon),
+		"durability": get_durability(run_weapon), "haul": banked,
 	}
 	last_run.merge(extra, true)
 	phase = Phase.GARAGE
 	EventBus.run_ended.emit(success, earned)
 	EventBus.currency_changed.emit(currency)
 	save_game()
+	if not banked.is_empty():
+		var run_id := "%s-%d-%04d" % [guest_id.left(8), int(Time.get_unix_time_from_system()), randi() % 10000]
+		var market := get_node_or_null("/root/CampMarket")
+		if market:
+			market.report_haul.call_deferred(run_id, banked)
+		else:
+			queue_haul(run_id, banked)
 	return last_run
+
+
+# ---------- Camp market ----------
+
+func add_run_commodity(id: String, amount := 1) -> void:
+	if phase != Phase.RUN or amount <= 0:
+		return
+	run_haul[id] = int(run_haul.get(id, 0)) + amount
+	EventBus.commodity_collected.emit(id, int(run_haul[id]))
+
+
+func commodity_name(id: String, count := 1) -> String:
+	var c: Dictionary = COMMODITIES.get(id, {})
+	if c.is_empty():
+		return id.capitalize()
+	return str(c.name) if count == 1 else str(c.plural)
+
+
+func add_currency(amount: int) -> void:
+	if amount == 0:
+		return
+	currency = maxi(0, currency + amount)
+	EventBus.currency_changed.emit(currency)
+	save_game()
+
+
+## The bridge's balances replace the local mirror once it has acknowledged every pending haul.
+func set_haul(balances: Dictionary) -> void:
+	if not pending_hauls.is_empty():
+		return
+	haul = balances.duplicate()
+	save_game()
+
+
+func queue_haul(run_id: String, banked: Dictionary) -> void:
+	for entry in pending_hauls:
+		if entry.get("run_id", "") == run_id:
+			return
+	pending_hauls.append({"run_id": run_id, "haul": banked.duplicate()})
+	save_game()
+
+
+func remove_pending_haul(run_id: String) -> void:
+	for i in pending_hauls.size():
+		if pending_hauls[i].get("run_id", "") == run_id:
+			pending_hauls.remove_at(i)
+			save_game()
+			return
 
 
 func _on_scrap_collected(amount: int) -> void:
@@ -333,6 +430,9 @@ func save_game() -> void:
 		"last_run": last_run,
 		"run_scores": run_scores,
 		"settings": settings,
+		"haul": haul,
+		"pending_hauls": pending_hauls,
+		"guest_id": guest_id,
 	}
 	# Write to a temp file, then swap it in, so a crash mid-write can't corrupt the save.
 	var tmp := save_path + ".tmp"
@@ -381,6 +481,21 @@ func load_game() -> void:
 				run_scores.append(score)
 	settings = DEFAULT_SETTINGS.duplicate()
 	settings.merge(data.get("settings", {}), true)
+	haul = {}
+	var saved_haul: Variant = data.get("haul", {})
+	if saved_haul is Dictionary:
+		for id in saved_haul:
+			if COMMODITIES.has(id) and int(saved_haul[id]) > 0:
+				haul[id] = int(saved_haul[id])
+	pending_hauls.clear()
+	var saved_pending: Variant = data.get("pending_hauls", [])
+	if saved_pending is Array:
+		for entry in saved_pending:
+			if entry is Dictionary and entry.has_all(["run_id", "haul"]) and entry.haul is Dictionary:
+				pending_hauls.append(entry)
+	guest_id = str(data.get("guest_id", ""))
+	if not guest_id.is_valid_identifier() or guest_id.length() < 8:
+		guest_id = ""
 
 
 func reset_save() -> void:
@@ -394,4 +509,7 @@ func reset_save() -> void:
 	last_run = {}
 	run_scores.clear()
 	settings = DEFAULT_SETTINGS.duplicate()
+	haul = {}
+	pending_hauls.clear()
+	guest_id = _new_guest_id()
 	save_game()

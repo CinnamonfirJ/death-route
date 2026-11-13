@@ -26,6 +26,8 @@ const TILE := 32
 ## Scrap per healthy survivor delivered / per infected one (the camp has a bad night).
 const SURVIVOR_BONUS := 15
 const INFECTED_PENALTY := 20
+## Camp-market supply crates placed at decoy pizza spots each run.
+const CRATES_PER_RUN := 3
 
 @export var location_id: StringName = &"wasteland"
 @export var location_name := "The Wasteland"
@@ -243,118 +245,13 @@ func _pizza_spawn_spots() -> Array[Vector2]:
 	return []
 
 
-func _add_order(stop: DeliveryCustomer, number: int) -> PizzaCargo:
-	var order: PizzaCargo = PIZZA_SCENE.instantiate()
-	order.name = "PizzaOrder_%d" % number
-	order.number = number
-	order.customer = stop
-	stop.pizza = order
-	entities.add_child(order)
-	pizzas.append(order)
-	order.changed.connect(_on_pizza_changed.bind(order))
-	return order
-
-
-func _start_delivery_layout() -> void:
-	# Nav maps can still contain the previous scene until the physics server flushes it.
-	var nav := nav_region.get_navigation_map()
-	for tick in 12:
-		await get_tree().physics_frame
-		var region := nav_region.get_region_rid()
-		if NavigationServer2D.region_get_iteration_id(region) == 0:
-			continue
-		var path := NavigationServer2D.map_get_path(nav, player.global_position, _depot.global_position, true)
-		if not path.is_empty() and path[-1].distance_to(_depot.global_position) < 8.0:
-			break
-	var spots: Array[Vector2] = _pizza_spawn_spots().duplicate()
-	spots.shuffle()
-	var grid := _route_grid()
-	var job_positions := PackedVector2Array()
-	for task in tasks:
-		var point := task.global_position
-		for candidate in grid:
-			if candidate.distance_to(point) >= job_spacing and _clear_route_spot(candidate, 44.0, job_spacing):
-				point = candidate
-				break
-		_reserved_spots.append(point)
-		job_positions.append(point)
-	for order in pizzas:
-		var point := _take_route_spot(spots, 85.0)
-		order.place(point)
-	_spawn_dynamic()
-	if Net.is_online():
-		_apply_job_positions.rpc(job_positions)
-	else:
-		_apply_job_positions(job_positions)
-	if not Net.is_online():
-		_spawn_companions()
-
-
-@rpc("authority", "call_local", "reliable")
-func _apply_job_positions(positions: PackedVector2Array) -> void:
-	for i in tasks.size():
-		tasks[i].global_position = positions[i]
-	_build_navigation(map_rect())
-	_layout_ready = true
-	_update_objective()
-
-
-func _clear_route_spot(point: Vector2, radius: float, spacing: float) -> bool:
-	if not map_rect().grow(-radius - 16.0).has_point(point):
-		return false
-	if point.distance_to(player.global_position) < 105.0 or point.distance_to(start_car.global_position) < radius + 38.0:
-		return false
-	for order in pizzas:
-		if point.distance_to(order.customer.global_position) < radius + 44.0:
-			return false
-	for reserved in _reserved_spots:
-		if point.distance_to(reserved) < spacing:
-			return false
-	for pool in get_tree().get_nodes_in_group(&"acid_pool"):
-		if pool.contains(point, radius + 6.0):
-			return false
-	var shape := CircleShape2D.new()
-	shape.radius = radius
-	var query := PhysicsShapeQueryParameters2D.new()
-	query.shape = shape
-	query.transform = Transform2D(0.0, point)
-	query.collision_mask = 1 | 128
-	if not get_world_2d().direct_space_state.intersect_shape(query, 1).is_empty():
-		return false
-	var nav := nav_region.get_navigation_map()
-	var path := NavigationServer2D.map_get_path(nav, player.global_position, point, true)
-	return not path.is_empty() and path[-1].distance_to(point) < 5.0
-
-
-func _take_route_spot(spots: Array[Vector2], spacing: float) -> Vector2:
-	for point in spots:
-		if _clear_route_spot(point, 14.0, spacing):
-			_reserved_spots.append(point)
-			spots.erase(point)
-			return point
-	# Search the map in random order if the hand-placed spots are unavailable.
-	var grid := _route_grid()
-	for point in grid:
-		if _clear_route_spot(point, 14.0, spacing):
-			_reserved_spots.append(point)
-			return point
-	# Last resort for custom maps: reuse a clear spot close to the starting lane.
-	for point in grid:
-		if _clear_route_spot(point, 10.0, 20.0):
-			_reserved_spots.append(point)
-			return point
-	push_warning("No reachable loot spot on %s" % location_id)
-	return player.global_position
-
-
-func _route_grid() -> Array[Vector2]:
-	var grid: Array[Vector2] = []
-	var rect := map_rect()
-	for x in range(int(rect.position.x) + 72, int(rect.end.x) - 72, 64):
-		for y in range(int(rect.position.y) + 72, int(rect.end.y) - 72, 64):
-			grid.append(Vector2(x, y))
-	grid.shuffle()
-	return grid
+func _place_pizza() -> void:
+	var spots := _pizza_spawn_spots()
+	if spots.is_empty():
+		push_warning("No pizza spawn spots in %s" % location_id)
+		pizza.place(player.global_position + Vector2(0, 32))
+		return
+	pizza.place(spots.pick_random())
 
 
 # ---------- Jobs + objective ----------

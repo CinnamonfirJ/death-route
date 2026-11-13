@@ -22,14 +22,15 @@ enum Kind {
 	CREW_START,
 	FLARE_PISTOL,
 	NEEDLE_SMG,
+	CRATE,         ## A camp-market supply crate (set `commodity`, or leave blank for a random one).
 }
 
 const LABELS := ["ZOMBIE SPAWN", "CAR SPAWN", "PIZZA?", "SURVIVOR", "SPARE CAR", "walker", "latcher",
-	"stopper", "BRUTE", "scrap", "ammo", "fuel", "medkit", "CREW START", "FLARE", "NEEDLE"]
+	"stopper", "BRUTE", "scrap", "ammo", "fuel", "medkit", "CREW START", "FLARE", "NEEDLE", "CRATE"]
 const COLORS := [Color(0.9, 0.2, 0.2), Color(0.3, 0.6, 1.0), Color(1.0, 0.6, 0.1), Color(0.3, 0.9, 0.4),
 	Color(0.5, 0.7, 1.0), Color(0.6, 0.9, 0.5), Color(0.6, 0.9, 0.5), Color(0.6, 0.9, 0.5), Color(0.9, 0.4, 0.9),
 	Color(1, 0.85, 0.3), Color(0.6, 0.8, 1), Color(1, 0.9, 0.3), Color(1, 0.4, 0.4),
-	Color(0.8, 0.85, 1.0), Color("#ff8650"), Color("#69e6ef")]
+	Color(0.8, 0.85, 1.0), Color("#ff8650"), Color("#69e6ef"), Color("#e9c46a")]
 ## Preview art per kind: [manifest section, id] (characters / items) or a texture path.
 const PREVIEW := {
 	Kind.SURVIVOR: ["characters", "npc_companion_a"], Kind.WALKER: ["characters", "zombie_walker"],
@@ -39,9 +40,10 @@ const PREVIEW := {
 	Kind.SPARE_CAR: ["path", "res://assets/vehicles/car3.png"],
 	Kind.FLARE_PISTOL: ["path", "res://assets/items/flare_pistol_pickup.png"],
 	Kind.NEEDLE_SMG: ["path", "res://assets/items/needle_smg_pickup.png"],
+	Kind.CRATE: ["items", "chest_metal"],
 }
 ## Default pickup amounts (amount = 0 uses these).
-const DEFAULT_AMOUNT := {Kind.SCRAP: 6, Kind.AMMO: 12, Kind.FUEL: 40, Kind.MEDKIT: 35}
+const DEFAULT_AMOUNT := {Kind.SCRAP: 6, Kind.AMMO: 12, Kind.FUEL: 40, Kind.MEDKIT: 35, Kind.CRATE: 1}
 
 @export var kind: Kind = Kind.ZOMBIE_SPAWN:
 	set(v):
@@ -50,6 +52,8 @@ const DEFAULT_AMOUNT := {Kind.SCRAP: 6, Kind.AMMO: 12, Kind.FUEL: 40, Kind.MEDKI
 ## Pickups only: how much it gives (0 = default).
 @export var amount := 0
 @export var anchored := false
+## CRATE only: medkit, premium_ammo, battery or food_stock. Blank picks one at random each run.
+@export var commodity := ""
 
 static var _manifest: Dictionary = {}
 
