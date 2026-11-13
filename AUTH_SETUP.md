@@ -13,7 +13,7 @@ Players select **Sign in with Google**, confirm the game code, and return to pla
 
 ## Host the bridge
 
-GitHub Actions deploys the `dead-route-sign-in` Worker before publishing the game to Cloudflare Pages. The Pages service binding forwards sign-in requests on `deathroute.fun` to that Worker, and a Durable Object keeps sign-in state between requests. Put the NEAR settings in **Cloudflare → Workers & Pages → dead-route-sign-in → Settings → Variables and Secrets**.
+GitHub Actions deploys the `dead-route-sign-in` Worker before publishing the game to Cloudflare Pages. The Pages service binding forwards sign-in requests on `deathroute.fun` to that Worker, and a Durable Object keeps sign-in state between requests. Set `NEAR_RELAYER_ACCOUNT`, `NEAR_RELAYER_KEY`, and `NEAR_ACCOUNT_ROOT_KEY` in the repository's Actions secrets so deployment installs them on the Worker. Set optional balance and item settings in **Cloudflare → Workers & Pages → dead-route-sign-in → Settings → Variables and Secrets**.
 
 | Environment variable | Value |
 | --- | --- |
