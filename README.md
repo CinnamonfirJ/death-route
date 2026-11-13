@@ -2,28 +2,46 @@
 
 Dead Route is a Godot 4.7 zombie-survival delivery game with solo play and WebSocket co-op. Open [`project.godot`](project.godot) in Godot to run it locally. See [BUILD.md](BUILD.md) for exports and multiplayer setup.
 
-## How rewards work today
+## The problem
 
-Find the pizza, pick it up, and hand it to the customer NPC. The handoff updates the delivery objective and leaves the game running. After the handoff and all route jobs, choose **Finish route** from the pause menu. In co-op, the host finishes the route for the crew.
+A fixed-price shop gives players little reason to react to what other players scavenge or buy. We wanted the supply run, the field purchase, and the camp market to affect each other while players stay focused on surviving the route.
 
-Scrap comes from loot, jobs, and survivor or rival outcomes. A successful run banks all the scrap earned during that run. A failed or abandoned solo run banks half, rounded down. Banked scrap buys upgrades and weapon maintenance in the Garage. The balance, last run summary, and top eight successful runs live in the local Godot save at `user://save_game.save`. The title screen's leaderboard reads this local history. **Settings → Lighting** switches between Night and Classic. Press **F** to toggle the flashlight and aim it with the mouse. On touch, use **LIGHT** and the aim stick.
+## What we built
 
-| Game event | Where it happens |
+Dead Route is a top-down zombie survival and pizza-delivery game for solo play or up to four players in online co-op. Crews fight, drive, scavenge supplies, deliver orders, finish repair jobs, and return to Pizza Co. to clock out. During the run, players spend earned scrap at field vendors for ammo, healing, a temporary damage shield, or a speed boost. The Garage Market and field vendors draw from shared merchant stock. Selling medkits increases stock and can lower the next quote. Buying can raise prices or sell a shelf out. Merchants can go bankrupt, and players can pool scrap to reopen them. The Garage's Fast-forward 7 Days mode previews a simulated week of prices, stock, and shop closures.
+
+## How NEAR fits in
+
+Players can sign in with Google or play as guests. The bridge provisions NEAR testnet accounts in the background and uses the deployed Camp Commodities NEP-245 contract for five tradable commodity types: Medkits, Premium Ammo, Pizza Delivery Contracts, Flashlight Batteries, and Food Stock. For eligible signed-in trades, the game relayer submits transfers and pays gas in the background. Players trade through game buttons without a seed phrase, wallet popup, or gas prompt. Guest trades use the shared market ledger, and scrap stays off-chain.
+
+The bridge uses the game's relayer and the Camp Commodities contract's idempotent
+`relayed_transfer` method. The official NEAR Intents verifier is outside the current integration.
+The [deployed testnet contract](https://testnet.nearblocks.io/address/camp.deadroute-sponsor-7x29.testnet)
+contains the five commodity token IDs. The optional minted shotgun uses a separate NFT entitlement
+check. See [AUTH_SETUP.md](AUTH_SETUP.md) and [ECONOMY.md](ECONOMY.md) for implementation and setup.
+
+## Play a route
+
+1. Launch a solo run or create an online co-op room. Invite up to three other players with the room code.
+2. Scavenge pizza and supply crates, hand the orders to their customers, and finish the route jobs.
+   Approach Rusty, Doc, or Mama G to quick-buy supplies with your current run's scrap.
+3. When orders and jobs are complete, follow the Pizza Co. marker and interact at the depot door.
+   Any eligible co-op courier at the door can clock the crew out.
+4. In the Garage, open **Market** to trade banked supplies, pool scrap for a closed shop, or select
+   **Fast-forward 7 Days** to watch the simulation. Its default playback lasts 24 seconds.
+   Applying a preview to the live market requires a configured market operator.
+
+A successful run banks remaining scrap. A failed run banks half, rounded down. The title-screen
+leaderboard shows the top eight successful runs from the local save, with the courier's display
+name and map. Use **F** or the touch **LIGHT** button to toggle your flashlight. Switch between
+Night and Classic under **Settings → Lighting**.
+
+| Feature | Implementation |
 | --- | --- |
-| Pizza pickup and handoff | [`PizzaCargo._try_interaction()`](scripts/pickups/pizza_cargo.gd) checks the carrier and interaction distance. The host runs this check in co-op. |
-| Successful route completion | [`Location.finish_route()`](scripts/locations/location.gd) checks that the pizza was handed over and every job is done. [`Net.end_run()`](scripts/autoload/net.gd) broadcasts the result in co-op. |
-| Local scrap and run history | [`GameManager.end_run()`](scripts/autoload/game_manager.gd) calculates banked scrap, updates the summary, and saves on each player's machine. |
-| Supply crates and the camp haul | [`Location._place_crates()`](scripts/locations/location.gd) drops crates at decoy pizza spots. [`Pickup.apply_to()`](scripts/pickups/pickup.gd) adds them to the run haul, and `GameManager.end_run()` banks them (half on failure) and mints a Pizza Delivery Contract for a completed delivery. [`CampMarket`](scripts/autoload/market_session.gd) reports the haul to the bridge. |
-
-## Google sign-in
-
-Players can sign in with Google or play as guests. The [account setup guide](AUTH_SETUP.md) covers Google configuration, background NEAR account provisioning, and automatic access to the locked shotgun for the account that owns it.
-
-Shop uses local scrap. Earn shows completed deliveries and explains how to earn scrap. On-chain rewards require a rewards contract and a service that verifies completed runs.
-
-## Camp market and NEP-245 commodities
-
-Supply crates found on a route (at pizza spots that turned out empty) and every finished delivery become **camp commodities**: token ids on the [Camp Commodities NEP-245 contract](contracts/camp-commodities). Back in the Garage, the **Market** tab sells them to the camp's merchant NPCs, whose prices and reasoning come from one readable file, [`economy/pricing_rules.toml`](economy/pricing_rules.toml). The wallet bridge runs the market and mirrors balances on-chain through the relayer, so the player only ever clicks Sell or Buy. [ECONOMY.md](ECONOMY.md) has the design, the requirement mapping, and a three-minute judge demo including the **Fast-forward 7 days** mode.
+| Pizza pickup and handoff | [PizzaCargo](scripts/pickups/pizza_cargo.gd) validates the carrier and distance. |
+| Route checkout | [Location.request_checkout](scripts/locations/location.gd) validates the depot interaction on the host. |
+| Supply crates and banking | [Location._spawn_supply_crates](scripts/locations/location.gd) places crates. [GameManager.end_run](scripts/autoload/game_manager.gd) banks the haul and records the pizza delivery commodity for a successful delivery route. |
+| Field vendors and the market | [Field vendor](scripts/locations/field_vendor.gd), [market engine](wallet-bridge/market.mjs), and [pricing rules](economy/pricing_rules.toml). |
 
 ## Gameplay tuning
 
@@ -32,11 +50,11 @@ Supply crates found on a route (at pizza spots that turned out empty) and every 
 - Select a pool under `AcidPools` in Camp or Route 9 to change its radii, tick damage, or bubble effects. Move its matching markers to relocate the loot.
 - Generator sound, shake, and light are exported on the repair jobs. Flashlight range and intensity are exported on the player scene. Night ambient and flower settings are in `scripts/locations/room_lighting.gd`.
 
-## NEAR rewards handoff
+## Future route reward design
 
 Put the reward contract and its tests in **`contracts/rewards/`** at the repository root. This is the proposed location for the contract project. The game team owns Google and wallet sign-in, account linking, and the backend that verifies completed runs. The contract developer owns reward issuance, authorization of the reward issuer, and duplicate-claim protection.
 
-The integration point is a **verified successful route completion**. Use the rules in `Location.finish_route()` to define that result. In production, a trusted game service needs to verify and record the result before the reward backend submits it. The current co-op host is a player's device, and the run summary and scrap balance are computed locally. Keep those values for gameplay and display. Use a server-issued run ID and verified player identity as the inputs to reward issuance.
+The integration point is a **verified successful route completion**. Use the rules in `Location.can_finish_route()` and `Location.request_checkout()` to define that result. In production, a trusted game service needs to verify and record the result before the reward backend submits it. The current co-op host is a player's device, and the run summary and scrap balance are computed locally. Keep those values for gameplay and display. Use a server-issued run ID and verified player identity as the inputs to reward issuance.
 
 ### Proposed contract inputs
 

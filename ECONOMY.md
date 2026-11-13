@@ -9,8 +9,7 @@ This document is the design on paper, then what each piece of the repository doe
 
 ## The loop
 
-**Every 30 seconds (on the route).** The courier works a zombie-infested route managing flashlight
-battery, stamina and weapon wear, hunting the pizza. Pizza spots that turn out empty hold a
+**Every 30 seconds (on the route).** The courier works a zombie-infested route using the flashlight, managing weapon wear, and hunting for pizza orders. Pizza spots that turn out empty hold a
 **supply crate** instead (medkits, premium ammo, batteries, food stock). Every crate is camp-market
 supply, so pushing one spot deeper is never wasted. Combat and survival are the mining phase.
 
@@ -63,7 +62,7 @@ operator's verified Google subject. It is separate from the OAuth client ID.
 | Agent NPCs with wallets | Each merchant is a sub-account of the relayer (`rusty.<relayer>`, `doc.<relayer>`, `mama-g.<relayer>`), created on first use by [`wallet-bridge/nep245.mjs`](wallet-bridge/nep245.mjs). They buy and sell on their own from the pricing rules; the bridge is their brain. |
 | Readable pricing rules with a tooltip | [`economy/pricing_rules.toml`](economy/pricing_rules.toml) is the only tuning surface. The bridge returns a `reason` line and the worked `formula` with every quote; the Garage shows the line under the price and the formula in the row tooltip. |
 | Fast-forward (judge feature) | **FAST-FORWARD 7 DAYS** in the Market tab. The bridge simulates a week of synthetic couriers on a copy of the live books (deterministic seed) and the game plays it back: a price graph fills in day by day while the log prints *"Day 3: Doc (Camp Medic) went bankrupt. Shop closed."* A configured market operator can apply the simulation to the live market. |
-| NEAR intents | A trade is an intent `{merchant, commodity, side, qty, intent_id, max_total}`. The bridge matches it against the books, then the relayer executes `relayed_transfer(intent_id, …)` on the contract, which is idempotent per intent id. This is a game-side intent relayer, not the `intents.near` verifier; `nep245.mjs` is the one file to swap if that integration is wanted. |
+| Game trade intents | A trade is an intent `{merchant, commodity, side, qty, intent_id, max_total}`. The bridge matches it against the books, then the relayer executes `relayed_transfer(intent_id, …)` on the contract, which is idempotent per intent id. The official NEAR Intents verifier is outside the current integration. |
 
 ## The pricing algorithm
 
@@ -98,7 +97,7 @@ Garage ▸ Market tab   ◄──────────── POST /api/market
 - **Scrap stays off-chain** in the local save, as before. The bridge tells the client the scrap
   delta of each trade; buys carry a `max_total` so a price move between quote and click can only
   make the trade smaller, never dearer.
-- **Commodity balances live in the bridge** (`wallet-bridge/data/market.json`) and are mirrored to
+- **Commodity balances live in the bridge** (the production Durable Object, or `wallet-bridge/data/market.json` on the local server) and are mirrored to
   the contract in the background. Each ledger row records `pending`, `confirmed` with a tx hash and
   explorer link, `failed`, or `ledger-only` (guest or no contract configured). Trades never wait on
   the chain.
@@ -129,8 +128,7 @@ builds the UI, and round-trips a trade when a bridge is listening on 8787).
 
 ## Judge demo, three minutes
 
-1. Open the Garage ▸ **Market**. Point at the account line: *Trading as … · bridge ledger* or
-   *NEP-245 on testnet*. No wallet UI anywhere.
+1. Open the Garage ▸ **Market**. Point at the account line and the stock and price quotes.
 2. Sell medkits to Doc one at a time. Read her line change as the price slides. Hover a row for
    the worked formula.
 3. Sell the Pizza Delivery Contract to Mama G: the delivery itself is the valuable token.
