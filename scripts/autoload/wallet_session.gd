@@ -16,15 +16,29 @@ var _owns_shotgun := false
 var _ownership_deadline := 0
 var _last_check := -3000
 var _checking := false
+var _web_session_callback: JavaScriptObject
+var _web_logout_callback: JavaScriptObject
 
 const ENTITLEMENT_CACHE_MS := 600_000
 
 
 func _ready() -> void:
 	if _same_origin_web():
-		var result := await _request(_configured_bridge() + "/api/web/session", HTTPClient.METHOD_GET)
-		if _attempt == 0 and not signed_in and result.get("signed_in", false):
-			_accept_session(_configured_bridge(), result)
+		busy = true
+		message = "Checking your sign-in…"
+		_web_session_callback = JavaScriptBridge.create_callback(_restore_web_session)
+		JavaScriptBridge.get_interface("window").deadRouteReadWebSession(_web_session_callback)
+
+
+func _restore_web_session(args: Array) -> void:
+	_web_session_callback = null
+	if _attempt != 0:
+		return
+	var result: Variant = JSON.parse_string(str(args[0]))
+	if result is Dictionary and result.get("signed_in", false) and not str(result.get("session", "")).is_empty():
+		_accept_session(_configured_bridge(), result)
+	else:
+		_finish("")
 
 
 func _configured_bridge() -> String:
@@ -97,11 +111,24 @@ func _accept_session(bridge: String, result: Dictionary) -> void:
 
 func sign_out() -> void:
 	if _same_origin_web():
-		var result := await _post(_configured_bridge() + "/api/web/logout", {})
-		if result.get("signed_in", true):
-			message = "Could not sign out. Please try again."
-			changed.emit()
+		if _web_logout_callback != null:
 			return
+		_web_logout_callback = JavaScriptBridge.create_callback(_finish_web_logout)
+		JavaScriptBridge.get_interface("window").deadRouteEndWebSession(_web_logout_callback)
+		return
+	_clear_session()
+
+
+func _finish_web_logout(args: Array) -> void:
+	_web_logout_callback = null
+	if bool(args[0]):
+		_clear_session()
+	else:
+		message = "Could not sign out. Please try again."
+		changed.emit()
+
+
+func _clear_session() -> void:
 	signed_in = false
 	google_name = ""
 	_session = ""
@@ -156,16 +183,11 @@ func _finish(status: String) -> void:
 
 
 func _post(url: String, payload: Dictionary) -> Dictionary:
-	return await _request(url, HTTPClient.METHOD_POST, JSON.stringify(payload))
-
-
-func _request(url: String, method: HTTPClient.Method, body := "") -> Dictionary:
 	var http := HTTPRequest.new()
 	http.timeout = 12.0
 	http.max_redirects = 0
 	add_child(http)
-	var headers := PackedStringArray(["Content-Type: application/json"]) if method == HTTPClient.METHOD_POST else PackedStringArray()
-	var err := http.request(url, headers, method, body)
+	var err := http.request(url, ["Content-Type: application/json"], HTTPClient.METHOD_POST, JSON.stringify(payload))
 	if err != OK:
 		http.queue_free()
 		return {}

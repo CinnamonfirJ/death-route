@@ -126,9 +126,11 @@ export function createHandler({ flows = new Map(), states = new Map(), sessions 
     }
     states.delete(state);
     res.setHeader("Set-Cookie", pairingCookie("", 0));
+    let stage = "authorization";
     try {
       const code = url.searchParams.get("code");
       if (!code) throw new Error("Authorization rejected");
+      stage = "token exchange";
       const form = new URLSearchParams({
         grant_type: "authorization_code", client_id: clientId, code,
         redirect_uri: callback, code_verifier: flow.verifier,
@@ -138,6 +140,7 @@ export function createHandler({ flows = new Map(), states = new Map(), sessions 
         method: "POST", body: form, redirect: "error", signal: AbortSignal.timeout(10_000),
       });
       if (!response.ok) throw new Error("Token exchange failed");
+      stage = "identity verification";
       const { id_token: idToken } = await response.json();
       const { payload } = await jwtVerify(idToken, jwks, {
         issuer: [issuer, "accounts.google.com"],
@@ -150,6 +153,7 @@ export function createHandler({ flows = new Map(), states = new Map(), sessions 
       const profileName = typeof payload.name === "string" ? payload.name : payload.given_name;
       const displayName = typeof profileName === "string" ?
         [...profileName.replace(/[\p{Cc}\p{Cf}]/gu, " ").trim().replace(/\s+/gu, " ")].slice(0, 16).join("") : "";
+      stage = "session creation";
       const session = finishAccount(flow, payload.sub, displayName);
       if (flow.web) {
         removeFlow(flow);
@@ -159,6 +163,7 @@ export function createHandler({ flows = new Map(), states = new Map(), sessions 
       }
       page(res, 200, "<p>Google sign-in is complete. Return to Dead Route.</p>");
     } catch {
+      if (stage !== "authorization") console.error("Google sign-in failed during", stage);
       if (flow.web) {
         removeFlow(flow);
         res.writeHead(303, { Location: "/?signin=failed" });
@@ -177,7 +182,7 @@ export function createHandler({ flows = new Map(), states = new Map(), sessions 
 
   function webSessionCookie(value, age) {
     const secure = publicUrl.protocol === "https:" ? "; Secure" : "";
-    return `dr_session=${value}; Max-Age=${age}; Path=/api/web/; HttpOnly; SameSite=Strict${secure}`;
+    return `dr_session=${value}; Max-Age=${age}; Path=/api/web/; HttpOnly; SameSite=Lax${secure}`;
   }
 
   function authorizeGoogle(res, flow) {
