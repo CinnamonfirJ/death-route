@@ -59,6 +59,7 @@ var run_scores: Array = []
 
 ## Player options (saved). Auto-aim on by default for casual play; hardcore players switch it off.
 const DEFAULT_SETTINGS := {
+	"display_name": "",
 	"auto_aim": true, "auto_run": false, "sfx_volume": 0.8, "screen_shake": 1.0,
 	"music_volume": 0.6,
 	"lighting_mode": "night",
@@ -79,6 +80,19 @@ func set_setting(key: String, value: Variant) -> void:
 	settings[key] = value
 	settings_changed.emit()
 	save_game()
+
+
+func clean_display_name(value: String) -> String:
+	return value.replace("\n", " ").replace("\r", " ").replace("\t", " ").strip_edges().left(16).strip_edges()
+
+
+func display_name(fallback := "Courier") -> String:
+	var custom := clean_display_name(str(get_setting("display_name")))
+	if not custom.is_empty():
+		return custom
+	if not WalletSession.google_name.is_empty():
+		return WalletSession.google_name
+	return fallback
 
 # --- Per-run ---
 var run_scrap: int = 0

@@ -5,6 +5,7 @@ extends Node
 signal changed
 
 var signed_in := false
+var google_name := ""
 var busy := false
 var message := ""
 var browser_url := ""
@@ -21,7 +22,7 @@ const ENTITLEMENT_CACHE_MS := 600_000
 
 func _ready() -> void:
 	if _same_origin_web():
-		var result := await _post(_configured_bridge() + "/api/web/session", {})
+		var result := await _request(_configured_bridge() + "/api/web/session", HTTPClient.METHOD_GET)
 		if _attempt == 0 and not signed_in and result.get("signed_in", false):
 			_accept_session(_configured_bridge(), result)
 
@@ -52,7 +53,7 @@ func sign_in() -> void:
 	message = "Starting Google sign-in..."
 	changed.emit()
 	if OS.has_feature("web"):
-		_start_web_sign_in(bridge, attempt)
+		JavaScriptBridge.get_interface("window").location.assign(bridge + "/signin/web")
 		return
 	var flow := await _post(bridge + "/api/device/start", {})
 	if attempt != _attempt:
@@ -84,33 +85,10 @@ func sign_in() -> void:
 		_finish("The sign-in code expired. Start a new sign-in.")
 
 
-func _start_web_sign_in(bridge: String, attempt: int) -> void:
-	var browser := JavaScriptBridge.get_interface("window")
-	if not _same_origin_web():
-		browser.location.assign(bridge + "/signin/web")
-		return
-	browser.deadRouteOpenGoogleSignIn(bridge + "/signin/web")
-	message = "Choose your Google account to sign in."
-	changed.emit()
-	var deadline := Time.get_ticks_msec() + 300_000
-	while attempt == _attempt and Time.get_ticks_msec() < deadline:
-		await get_tree().create_timer(1.5).timeout
-		if attempt != _attempt:
-			return
-		var result := await _post(bridge + "/api/web/session", {})
-		if attempt != _attempt:
-			return
-		if result.get("signed_in", false):
-			browser.deadRouteCloseGoogleSignIn()
-			_accept_session(bridge, result)
-			return
-	if attempt == _attempt:
-		_finish("Google sign-in expired. Please try again.")
-
-
 func _accept_session(bridge: String, result: Dictionary) -> void:
 	_bridge = bridge
 	signed_in = true
+	google_name = GameManager.clean_display_name(str(result.get("display_name", "")))
 	_session = str(result.get("session", ""))
 	_read_entitlement(result)
 	_finish("")
@@ -125,6 +103,7 @@ func sign_out() -> void:
 			changed.emit()
 			return
 	signed_in = false
+	google_name = ""
 	_session = ""
 	_owns_shotgun = false
 	cancel_sign_in()
@@ -132,9 +111,6 @@ func sign_out() -> void:
 
 func cancel_sign_in() -> void:
 	_attempt += 1
-	if OS.has_feature("web"):
-		var browser := JavaScriptBridge.get_interface("window")
-		browser.deadRouteCloseGoogleSignIn()
 	_finish("")
 
 
@@ -180,12 +156,16 @@ func _finish(status: String) -> void:
 
 
 func _post(url: String, payload: Dictionary) -> Dictionary:
+	return await _request(url, HTTPClient.METHOD_POST, JSON.stringify(payload))
+
+
+func _request(url: String, method: HTTPClient.Method, body := "") -> Dictionary:
 	var http := HTTPRequest.new()
 	http.timeout = 12.0
 	http.max_redirects = 0
 	add_child(http)
-	var err := http.request(url, ["Content-Type: application/json"],
-		HTTPClient.METHOD_POST, JSON.stringify(payload))
+	var headers := PackedStringArray(["Content-Type: application/json"]) if method == HTTPClient.METHOD_POST else PackedStringArray()
+	var err := http.request(url, headers, method, body)
 	if err != OK:
 		http.queue_free()
 		return {}

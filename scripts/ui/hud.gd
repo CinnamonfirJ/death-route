@@ -196,7 +196,7 @@ func _on_player_damaged(_amount: float, hp: float) -> void:
 	var player := Net.local_player()
 	if player == null:
 		return
-	$TopLeft/HPLabel.text = GameManager.PLAYABLE_CHARACTERS[player.character_id].to_upper()
+	$TopLeft/HPLabel.text = player.display_name()
 	player_hp.max_value = player.max_hp
 	player_hp.value = hp
 	if _dead and hp > 0.0:

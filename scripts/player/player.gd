@@ -91,7 +91,7 @@ func _ready() -> void:
 
 
 func display_name() -> String:
-	return Net.peer_name(get_multiplayer_authority()) if Net.is_online() else GameManager.PLAYABLE_CHARACTERS[character_id]
+	return Net.peer_name(get_multiplayer_authority()) if Net.is_online() else GameManager.display_name()
 
 
 ## Auto-aim: max distance and how far off the crosshair a zombie can be to get locked.

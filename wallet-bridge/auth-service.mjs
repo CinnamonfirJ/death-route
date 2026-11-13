@@ -85,15 +85,15 @@ export function createHandler({ flows = new Map(), states = new Map(), sessions 
     return flow?.browser && matches(browser, flow.browser) ? flow : null;
   }
 
-  function finishAccount(flow, subject) {
+  function finishAccount(flow, subject, displayName) {
     if (!activeFlow(flow.id)) throw new Error("Pairing expired");
     const now = Date.now();
     for (const [key, value] of sessions) if (value.expires <= now) sessions.delete(key);
     if (sessions.size >= 1000) throw new Error("Too many sessions");
     const session = randomToken();
-    const identity = { subject, account: null, expires: now + sessionLifetime, lastCheck: 0 };
+    const identity = { subject, displayName, account: null, expires: now + sessionLifetime, lastCheck: 0 };
     sessions.set(session, identity);
-    flow.result = { signed_in: true, session, shotgun_owned: false };
+    flow.result = { signed_in: true, session, display_name: displayName, shotgun_owned: false };
     flows.set(flow.id, flow);
     if (provisioningReady) refreshItems(session, identity);
     return session;
@@ -147,24 +147,22 @@ export function createHandler({ flows = new Map(), states = new Map(), sessions 
           (payload.azp !== undefined && payload.azp !== clientId)) {
         throw new Error("Invalid Google login");
       }
-      const session = finishAccount(flow, payload.sub);
+      const profileName = typeof payload.name === "string" ? payload.name : payload.given_name;
+      const displayName = typeof profileName === "string" ?
+        [...profileName.replace(/[\p{Cc}\p{Cf}]/gu, " ").trim().replace(/\s+/gu, " ")].slice(0, 16).join("") : "";
+      const session = finishAccount(flow, payload.sub, displayName);
       if (flow.web) {
         removeFlow(flow);
         res.setHeader("Set-Cookie", webSessionCookie(session, sessionLifetime / 1000));
-        if (!flow.popup) {
-          res.writeHead(303, { Location: "/" });
-          return res.end();
-        }
-        const nonce = randomToken();
-        res.setHeader("Content-Security-Policy", `default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}'; frame-ancestors 'none'`);
-        return page(res, 200, `<p>You're signed in. You can close this window and return to the game.</p>
-          <script nonce="${nonce}">window.close()</script>`);
+        res.writeHead(303, { Location: "/?signin=complete" });
+        return res.end();
       }
       page(res, 200, "<p>Google sign-in is complete. Return to Dead Route.</p>");
     } catch {
       if (flow.web) {
         removeFlow(flow);
-        return page(res, 400, '<p>Google sign-in was cancelled or could not be completed.</p><p><a href="/">Return to Dead Route</a></p>');
+        res.writeHead(303, { Location: "/?signin=failed" });
+        return res.end();
       }
       flow.error = "Google sign-in could not be completed. Try again or play as a guest.";
       if (activeFlow(flow.id)) flows.set(flow.id, flow);
@@ -191,7 +189,7 @@ export function createHandler({ flows = new Map(), states = new Map(), sessions 
     flows.set(flow.id, flow);
     const authorize = new URL(authorizationEndpoint);
     authorize.search = new URLSearchParams({
-      client_id: clientId, response_type: "code", scope: "openid", redirect_uri: callback,
+      client_id: clientId, response_type: "code", scope: "openid profile", redirect_uri: callback,
       state: flow.state, nonce: flow.nonce, prompt: "select_account",
       code_challenge: hash(flow.verifier).digest("base64url"), code_challenge_method: "S256",
     });
@@ -209,21 +207,25 @@ export function createHandler({ flows = new Map(), states = new Map(), sessions 
       for (const flow of flows.values()) activeFlow(flow.id);
       if (flows.size >= 250) return page(res, 429, '<p>Sign-in is busy. <a href="/">Return to the game</a> and try again.</p>');
       return authorizeGoogle(res, {
-        id: randomToken(), web: true, popup: url.searchParams.get("popup") === "1", expires: Date.now() + lifetime,
+        id: randomToken(), web: true, expires: Date.now() + lifetime,
       });
     }
-    if (req.method === "POST" && (url.pathname === "/api/web/session" || url.pathname === "/api/web/logout")) {
-      if (req.headers.origin !== publicUrl.origin) return json(res, 403, { error: "Open sign-in from Dead Route." });
+    const webSession = ["GET", "POST"].includes(req.method) && url.pathname === "/api/web/session";
+    const webLogout = req.method === "POST" && url.pathname === "/api/web/logout";
+    if (webSession || webLogout) {
+      if ((webLogout || req.headers.origin) && req.headers.origin !== publicUrl.origin)
+        return json(res, 403, { error: "Open sign-in from Dead Route." });
       const session = (req.headers.cookie || "").match(/(?:^|; *)dr_session=([^;]+)/)?.[1];
-      if (url.pathname === "/api/web/logout") {
+      if (webLogout) {
         if (session) sessions.delete(session);
         res.setHeader("Set-Cookie", webSessionCookie("", 0));
         return json(res, 200, { signed_in: false });
       }
-      if (!session || !(sessions.get(session)?.expires > Date.now())) {
+      const identity = sessions.get(session);
+      if (!identity || identity.expires <= Date.now()) {
         return json(res, 200, { signed_in: false });
       }
-      return json(res, 200, { signed_in: true, session });
+      return json(res, 200, { signed_in: true, session, display_name: identity.displayName || "" });
     }
     if (req.method === "POST" && url.pathname === "/api/device/start") {
       const { method } = await readBody(req);

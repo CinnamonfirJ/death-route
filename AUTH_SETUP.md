@@ -6,7 +6,7 @@ On the web, players select **Sign in with Google** and choose an account in Goog
 
 1. In Google Cloud, open project **death-route** and go to **Google Auth Platform → Clients**.
 2. Open the existing Web application client. Under **Authorized redirect URIs**, add `https://deathroute.fun/oauth/callback` and `http://127.0.0.1:8787/oauth/callback` for local testing.
-3. Under **Audience**, confirm the app is in production. The bridge requests the `openid` scope.
+3. Under **Audience**, confirm the app is in production. The bridge requests `openid profile` to sign in and read the player's display name.
 4. Set the repository's Actions secrets `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. GitHub Actions deploys both as private Cloudflare Worker variables.
 
 [Google OpenID Connect](https://developers.google.com/identity/openid-connect/openid-connect)

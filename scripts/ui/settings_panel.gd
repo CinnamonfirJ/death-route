@@ -10,6 +10,24 @@ func _ready() -> void:
 	title.text = "SETTINGS"
 	title.add_theme_color_override(&"font_color", TitleStyle.AMBER)
 	add_child(title)
+	var name_label := Label.new()
+	name_label.text = "Display name"
+	TouchLayout.label(name_label)
+	add_child(name_label)
+	var name_edit := LineEdit.new()
+	name_edit.name = "DisplayName"
+	name_edit.text = str(GameManager.get_setting("display_name"))
+	name_edit.placeholder_text = WalletSession.google_name if not WalletSession.google_name.is_empty() else "Courier"
+	name_edit.max_length = 16
+	name_edit.custom_minimum_size.y = 36 if TouchLayout.enabled() else 24
+	add_child(name_edit)
+	var save_name := func() -> void:
+		var value := GameManager.clean_display_name(name_edit.text)
+		if value != GameManager.get_setting("display_name"):
+			GameManager.set_setting("display_name", value)
+	name_edit.text_changed.connect(func(_value: String) -> void: save_name.call())
+	name_edit.text_submitted.connect(func(_value: String) -> void: name_edit.release_focus())
+	_hint("Leave blank to use your Google name when signed in.")
 	if FullscreenButton.available():
 		var full := FullscreenButton.new()
 		TouchLayout.button(full)

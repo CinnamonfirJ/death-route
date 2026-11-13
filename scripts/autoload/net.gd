@@ -54,6 +54,37 @@ func _ready() -> void:
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
 	EventBus.noise_increased.connect(_on_local_noise)
 	EventBus.sound_made.connect(_on_local_sound)
+	GameManager.settings_changed.connect(_refresh_display_name)
+	WalletSession.changed.connect(_refresh_display_name)
+	_refresh_display_name()
+
+
+func _refresh_display_name() -> void:
+	var new_name := GameManager.display_name()
+	if new_name == my_name:
+		return
+	my_name = new_name
+	if not is_online() or not players.has(local_id()):
+		return
+	if is_host():
+		_set_peer_name(1, my_name)
+	else:
+		_rpc_set_display_name.rpc_id(1, my_name)
+
+
+@rpc("any_peer", "reliable")
+func _rpc_set_display_name(value: String) -> void:
+	if is_host():
+		_set_peer_name(multiplayer.get_remote_sender_id(), value)
+
+
+func _set_peer_name(id: int, value: String) -> void:
+	if not players.has(id):
+		return
+	var clean_name := GameManager.clean_display_name(value)
+	players[id].name = clean_name if not clean_name.is_empty() else "Courier"
+	_rpc_roster.rpc(players, settings)
+	roster_changed.emit()
 
 
 func _process(delta: float) -> void:
@@ -392,7 +423,8 @@ func _rpc_register(player_name: String, character: StringName) -> void:
 	if players.size() >= MAX_PLAYERS or in_match:
 		multiplayer.multiplayer_peer.disconnect_peer(id)
 		return
-	players[id] = {"name": player_name.strip_edges().left(16),
+	var clean_name := GameManager.clean_display_name(player_name)
+	players[id] = {"name": clean_name if not clean_name.is_empty() else "Courier",
 		"character": character if GameManager.PLAYABLE_CHARACTERS.has(character) else GameManager.DEFAULT_CHARACTER,
 		"team": _smaller_team(), "ready": false}
 	_rpc_roster.rpc(players, settings)
@@ -485,7 +517,8 @@ func _set_peer_character(id: int, character: StringName) -> void:
 func _rpc_roster(new_players: Dictionary, new_settings: Dictionary) -> void:
 	players = new_players
 	settings = new_settings
-	status_changed.emit("Connected. Waiting for the host to start.")
+	if not in_match:
+		status_changed.emit("Connected. Waiting for the host to start.")
 	roster_changed.emit()
 
 

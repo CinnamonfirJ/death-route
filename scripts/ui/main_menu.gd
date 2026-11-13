@@ -129,7 +129,7 @@ func _refresh_account() -> void:
 			_button(_account_actions, "OPEN SIGN-IN PAGE", WalletSession.open_browser, true)
 		_button(_account_actions, "CANCEL SIGN-IN", WalletSession.cancel_sign_in)
 	elif WalletSession.signed_in:
-		_status.text = WalletSession.message if not WalletSession.message.is_empty() else "Signed in with Google."
+		_status.text = WalletSession.message if not WalletSession.message.is_empty() else "Signed in with Google as %s." % GameManager.display_name()
 		_button(_account_actions, "PLAY", GameManager.goto_garage, true)
 		_button(_account_actions, "SIGN OUT", WalletSession.sign_out)
 	else:

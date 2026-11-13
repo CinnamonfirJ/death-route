@@ -79,7 +79,8 @@ func _build() -> void:
 	row1.add_child(_label("Name"))
 	_name_edit = LineEdit.new()
 	_name_edit.name = "NameEdit"
-	_name_edit.text = Net.my_name
+	_name_edit.text = str(GameManager.get_setting("display_name"))
+	_name_edit.placeholder_text = GameManager.display_name()
 	_name_edit.max_length = 16
 	_name_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_style_field(_name_edit)
@@ -322,9 +323,9 @@ func _on_directory(result: int, response_code: int, _headers: PackedStringArray,
 
 
 func _set_name() -> void:
-	Net.my_name = _name_edit.text.strip_edges().left(16)
-	if Net.my_name.is_empty():
-		Net.my_name = "Courier"
+	var value := GameManager.clean_display_name(_name_edit.text)
+	if value != GameManager.get_setting("display_name"):
+		GameManager.set_setting("display_name", value)
 
 
 func _on_host() -> void:

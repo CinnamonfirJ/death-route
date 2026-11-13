@@ -61,16 +61,6 @@
   <script>
     const insets = document.getElementById("insets");
     const canvas = document.getElementById("canvas");
-    let googleSignIn;
-    window.deadRouteOpenGoogleSignIn = (url) => {
-      googleSignIn = window.open(url + "?popup=1", "dead-route-google", "popup,width=520,height=680");
-      if (!googleSignIn) window.location.assign(url);
-    };
-    window.deadRouteCloseGoogleSignIn = () => {
-      if (googleSignIn && !googleSignIn.closed) googleSignIn.close();
-      googleSignIn = null;
-      canvas.focus();
-    };
     window.deadRouteInsets = () => {
       const style = getComputedStyle(insets);
       const width = Math.max(canvas.clientWidth, 1);
@@ -83,6 +73,23 @@
     const config = $GODOT_CONFIG;
     const launch = document.getElementById("launch");
     const status = document.getElementById("status");
+    const returned = new URL(location.href);
+    const signInResult = returned.searchParams.get("signin");
+    if (signInResult === "complete" || signInResult === "failed") {
+      status.textContent = signInResult === "complete" ?
+        "Restoring your sign-in…" : "Google sign-in did not finish. You can try again or play as a guest.";
+      returned.searchParams.delete("signin");
+      history.replaceState(history.state, "", returned);
+    }
+    if (signInResult === "complete") {
+      fetch("/api/web/session", { credentials: "same-origin", cache: "no-store" })
+        .then(response => response.json())
+        .then(session => {
+          status.textContent = session.signed_in ? "Signed in with Google." :
+            "Could not restore your sign-in. You can try again in the game.";
+        })
+        .catch(() => { status.textContent = "Could not check sign-in. You can try again in the game."; });
+    }
     const start = document.getElementById("start");
     const fullscreen = document.getElementById("fullscreen");
     const fullscreenStatus = document.getElementById("fullscreen-status");
@@ -139,7 +146,7 @@
     if (!Engine.isWebGLAvailable(2)) failed();
     else Promise.all([engine.init(config.executable), engine.preloadFile(pack)]).then(() => {
       launch.disabled = false;
-      launch.textContent = "Tap to play";
+      launch.textContent = signInResult === "complete" ? "Continue to game" : "Tap to play";
       launch.onclick = () => {
         launch.disabled = true;
         engine.start({ args: ["--main-pack", pack, ...(config.args || [])] }).then(() => {
