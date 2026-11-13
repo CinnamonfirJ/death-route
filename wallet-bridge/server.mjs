@@ -12,5 +12,5 @@ const market = new Market(rules, {
 const bind = process.env.WALLET_BIND || "127.0.0.1";
 const port = Number(process.env.WALLET_PORT || 8787);
 http.createServer(createHandler({ market })).listen(port, bind, () => {
-  console.log(`Dead Route bridge listening at http://${bind}:${port}`);
+  console.log(`Death Route bridge listening at http://${bind}:${port}`);
 });

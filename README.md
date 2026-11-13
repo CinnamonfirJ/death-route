@@ -1,6 +1,6 @@
-# Dead Route
+# Death Route
 
-Dead Route is a Godot 4.7 zombie-survival delivery game with solo play and WebSocket co-op. Open [`project.godot`](project.godot) in Godot to run it locally. See [BUILD.md](BUILD.md) for exports and multiplayer setup.
+Death Route is a Godot 4.7 zombie-survival delivery game with solo play and WebSocket co-op. Open [`project.godot`](project.godot) in Godot to run it locally. See [BUILD.md](BUILD.md) for exports and multiplayer setup.
 
 ## The problem
 
@@ -8,7 +8,7 @@ A fixed-price shop gives players little reason to react to what other players sc
 
 ## What we built
 
-Dead Route is a top-down zombie survival and pizza-delivery game for solo play or up to four players in online co-op. Crews fight, drive, scavenge supplies, deliver orders, finish repair jobs, and return to Pizza Co. to clock out. During the run, players spend earned scrap at field vendors for ammo, healing, a temporary damage shield, or a speed boost. The Garage Market and field vendors draw from shared merchant stock. Selling medkits increases stock and can lower the next quote. Buying can raise prices or sell a shelf out. Merchants can go bankrupt, and players can pool scrap to reopen them. The Garage's Fast-forward 7 Days mode previews a simulated week of prices, stock, and shop closures.
+Death Route is a top-down zombie survival and pizza-delivery game for solo play or up to four players in online co-op. Crews fight, drive, scavenge supplies, deliver orders, finish repair jobs, and return to Pizza Co. to clock out. During the run, players spend earned scrap at field vendors for ammo, healing, a temporary damage shield, or a speed boost. The Garage Market and field vendors draw from shared merchant stock. Selling medkits increases stock and can lower the next quote. Buying can raise prices or sell a shelf out. Merchants can go bankrupt, and players can pool scrap to reopen them. The Garage's Fast-forward 7 Days mode previews a simulated week of prices, stock, and shop closures.
 
 ## How NEAR fits in
 

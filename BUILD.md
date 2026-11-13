@@ -1,4 +1,4 @@
-# Building, sharing & playing Dead Route
+# Building, sharing & playing Death Route
 
 ## Ready-made packages
 
@@ -6,9 +6,9 @@
 
 | File | What it is |
 |---|---|
-| `DeadRoute-web-playtest.zip` | Current browser playtest build (upload to itch.io) |
-| `DeadRoute-windows.zip` | Windows game (one `.exe` inside) |
-| `DeadRoute-android.apk` | Android (debug-signed; sideload) |
+| `DeathRoute-web-playtest.zip` | Current browser playtest build (upload to itch.io) |
+| `DeathRoute-windows.zip` | Windows game (one `.exe` inside) |
+| `DeathRoute-android.apk` | Android (debug-signed; sideload) |
 
 ## Put the web version on itch.io (free)
 
@@ -27,10 +27,10 @@ The [GitHub Actions workflow](.github/workflows/deploy-web.yml) exports the game
 
 1. In Cloudflare, open **My Profile → API Tokens → Create Token → Create Custom Token**. Grant **Account → Cloudflare Pages → Edit**, scoped to the account that owns `dead-route`.
 2. In the GitHub repository, go to **Settings → Secrets and variables → Actions → New repository secret**. Name it `CLOUDFLARE_API_TOKEN` and paste the Cloudflare token into the secret value.
-3. Open **Actions → Build and deploy Dead Route → Run workflow**, select `main`, and start the run. Future pushes to `main` publish automatically. If the secret is missing, the workflow builds an artifact and skips publishing.
+3. Open **Actions → Build and deploy Death Route → Run workflow**, select `main`, and start the run. Future pushes to `main` publish automatically. If the secret is missing, the workflow builds an artifact and skips publishing.
 4. Verify [dead-route.pages.dev](https://dead-route.pages.dev/) and [deathroute.fun](https://deathroute.fun/) both reach **Tap to play** and open the title screen. Manage the custom domain in Cloudflare under **Workers & Pages → dead-route → Custom domains**.
 
-For a one-off dashboard upload, export the Web preset to `build/web/index.html`, then run `python tools/package_cloudflare_web.py build/web build/pages --zip build/DeadRoute-Cloudflare.zip` with a new or empty `build/pages` directory.
+For a one-off dashboard upload, export the Web preset to `build/web/index.html`, then run `python tools/package_cloudflare_web.py build/web build/pages --zip build/DeathRoute-Cloudflare.zip` with a new or empty `build/pages` directory.
 
 [Cloudflare Pages deployment from GitHub Actions](https://developers.cloudflare.com/pages/how-to/use-direct-upload-with-continuous-integration/)
 
@@ -44,8 +44,8 @@ From the Garage, open **Online Rooms**. Choose **Create Room** and leave **List 
 ## Deploy the room service
 
 1. In Cloudflare, enable the account's **workers.dev** subdomain under **Workers & Pages**.
-2. Add the GitHub Actions secret **CLOUDFLARE_ROOMS_API_TOKEN**. Use an API token scoped to the account that owns Dead Route with **Account → Workers Scripts → Edit** and **Account → Account Settings → Read**. Keep the existing Pages token for the web upload.
-3. Run **Build and deploy Dead Route** on **main**. The workflow deploys the relay, reads its public HTTPS URL, and sets that URL in the game before exporting it. For a separately deployed relay, set the GitHub repository variable **DEAD_ROUTE_ROOM_SERVICE** to its public HTTPS URL instead.
+2. Add the GitHub Actions secret **CLOUDFLARE_ROOMS_API_TOKEN**. Use an API token scoped to the account that owns Death Route with **Account → Workers Scripts → Edit** and **Account → Account Settings → Read**. Keep the existing Pages token for the web upload.
+3. Run **Build and deploy Death Route** on **main**. The workflow deploys the relay, reads its public HTTPS URL, and sets that URL in the game before exporting it. For a separately deployed relay, set the GitHub repository variable **DEAD_ROUTE_ROOM_SERVICE** to its public HTTPS URL instead.
 4. For manual desktop, Android, or itch exports, set **network/room_service** in **project.godot** to the same public HTTPS URL before exporting.
 
 For a local test, run **npx --yes wrangler@4.161.0 dev --config online-rooms/wrangler.toml --port 8794**. Launch Godot with **-- --rooms-url=http://127.0.0.1:8794** after the engine arguments. The development service accepts local rooms without an account.
@@ -71,9 +71,9 @@ For a local test, run **npx --yes wrangler@4.161.0 dev --config online-rooms/wra
 ## Rebuilding
 
 ```
-godot --headless --export-release "Windows Desktop" build/windows/DeadRoute.exe
+godot --headless --export-release "Windows Desktop" build/windows/DeathRoute.exe
 godot --headless --export-release "Web" build/web/index.html
-godot --headless --export-debug "Android" build/android/DeadRoute.apk
+godot --headless --export-debug "Android" build/android/DeathRoute.apk
 ```
 
 - Rooms (`rooms/*.tscn`, see ROOMS.md) and sounds (`assets/audio/`) are included automatically.

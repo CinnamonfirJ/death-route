@@ -27,7 +27,7 @@ func _ready() -> void:
 	stack.custom_minimum_size.x = 404 if _mobile else 274
 	stack.add_theme_constant_override(&"separation", 8)
 	_menu.add_child(stack)
-	var title := _label("DEAD ROUTE", 38, CREAM)
+	var title := _label("DEATH ROUTE", 38, CREAM)
 	title.add_theme_color_override(&"font_shadow_color", Color("#0b0715"))
 	title.add_theme_constant_override(&"shadow_offset_x", 2)
 	title.add_theme_constant_override(&"shadow_offset_y", 5)

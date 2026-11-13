@@ -1,4 +1,4 @@
-name: Build and deploy Dead Route
+name: Build and deploy Death Route
 
 on:
   push:
@@ -160,7 +160,7 @@ jobs:
           for delay in 0 5 15; do
             sleep "$delay"
             if npx --yes "wrangler@$WRANGLER_VERSION" pages deploy "$deploy_dir" \
-              --project-name=dead-route --branch=main --commit-hash="$GITHUB_SHA" --commit-message="Dead Route web build"; then
+              --project-name=dead-route --branch=main --commit-hash="$GITHUB_SHA" --commit-message="Death Route web build"; then
               exit 0
             fi
           done

@@ -51,14 +51,14 @@ function json(res, status, value) {
 function page(res, status, body) {
   res.writeHead(status, { "Content-Type": "text/html; charset=utf-8" });
   res.end(`<!doctype html><html lang="en"><meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1"><title>Dead Route Sign-In</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"><title>Death Route Sign-In</title>
   <style>
     *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0d0b18;color:#fff2df;font:16px system-ui}
     main{background:#1a192e;border:1px solid #9a5960;width:min(420px,calc(100% - 32px));padding:28px}
     h1{margin:0;color:#ffc688;font-size:26px}p{line-height:1.55;color:#d1cede}
     label,input,button{display:block;width:100%}input,button{font:inherit;padding:10px;margin-top:10px;border:1px solid #9a5960}
     input{background:#0d0b18;color:#fff2df}button{background:#362238;color:#fff2df;cursor:pointer}
-  </style><main><h1>Dead Route Sign-In</h1>${body}</main></html>`);
+  </style><main><h1>Death Route Sign-In</h1>${body}</main></html>`);
 }
 
 // The Node host uses memory. Cloudflare supplies persistent stores so a
@@ -163,7 +163,7 @@ export function createHandler({ flows = new Map(), states = new Map(), sessions 
         res.writeHead(303, { Location: "/?signin=complete" });
         return res.end();
       }
-      page(res, 200, "<p>Google sign-in is complete. Return to Dead Route.</p>");
+      page(res, 200, "<p>Google sign-in is complete. Return to Death Route.</p>");
     } catch {
       if (stage !== "authorization") console.error("Google sign-in failed during", stage);
       if (flow.web) {
@@ -173,7 +173,7 @@ export function createHandler({ flows = new Map(), states = new Map(), sessions 
       }
       flow.error = "Google sign-in could not be completed. Try again or play as a guest.";
       if (activeFlow(flow.id)) flows.set(flow.id, flow);
-      page(res, 502, "<p>Google sign-in could not be completed. Return to Dead Route to retry.</p>");
+      page(res, 502, "<p>Google sign-in could not be completed. Return to Death Route to retry.</p>");
     }
   }
 
@@ -272,7 +272,7 @@ export function createHandler({ flows = new Map(), states = new Map(), sessions 
     const webLogout = req.method === "POST" && url.pathname === "/api/web/logout";
     if (webSession || webLogout) {
       if ((webLogout || req.headers.origin) && req.headers.origin !== publicUrl.origin)
-        return json(res, 403, { error: "Open sign-in from Dead Route." });
+        return json(res, 403, { error: "Open sign-in from Death Route." });
       const session = (req.headers.cookie || "").match(/(?:^|; *)dr_session=([^;]+)/)?.[1];
       if (webLogout) {
         if (session) sessions.delete(session);
@@ -328,21 +328,21 @@ export function createHandler({ flows = new Map(), states = new Map(), sessions 
     }
     if (req.method === "GET" && url.pathname === "/signin") {
       const flow = activeFlow(url.searchParams.get("flow"));
-      if (!flow || flow.browser) return page(res, 400, "<p>Start a new sign-in in Dead Route.</p>");
-      return page(res, 200, `<p>Enter the code shown in Dead Route to confirm this sign-in.</p>
+      if (!flow || flow.browser) return page(res, 400, "<p>Start a new sign-in in Death Route.</p>");
+      return page(res, 200, `<p>Enter the code shown in Death Route to confirm this sign-in.</p>
         <form method="post" action="/signin"><input type="hidden" name="flow" value="${flow.id}">
         <label for="code">Game code</label><input id="code" name="code" inputmode="numeric" pattern="[0-9]{6}"
         maxlength="6" autocomplete="one-time-code" required><button>Continue with Google</button></form>`);
     }
     if (req.method === "POST" && url.pathname === "/signin") {
-      if (req.headers.origin !== publicUrl.origin) return page(res, 403, "<p>Open sign-in from Dead Route.</p>");
+      if (req.headers.origin !== publicUrl.origin) return page(res, 403, "<p>Open sign-in from Death Route.</p>");
       const { flow: id, code } = await readBody(req);
       const flow = activeFlow(id);
-      if (!flow || flow.browser) return page(res, 400, "<p>Start a new sign-in in Dead Route.</p>");
+      if (!flow || flow.browser) return page(res, 400, "<p>Start a new sign-in in Death Route.</p>");
       if (!matches(code, flow.code)) {
         if (++flow.attempts >= 5) removeFlow(flow);
         else flows.set(flow.id, flow);
-        return page(res, 400, "<p>The code did not match. Go back and check the code in Dead Route.</p>");
+        return page(res, 400, "<p>The code did not match. Go back and check the code in Death Route.</p>");
       }
       return authorizeGoogle(res, flow);
     }

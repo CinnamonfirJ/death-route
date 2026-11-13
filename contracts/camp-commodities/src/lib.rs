@@ -1,4 +1,4 @@
-//! Camp Commodities: the NEP-245 multi-token contract behind the Dead Route camp market.
+//! Camp Commodities: the NEP-245 multi-token contract behind the Death Route camp market.
 //!
 //! One contract, many token ids. Token "1" is a Medkit, "2" Premium Ammo, "3" a Pizza Delivery
 //! Contract, and so on (see economy/pricing_rules.toml). Every courier wallet and every merchant
@@ -156,7 +156,7 @@ impl CampCommodities {
             intents: LookupSet::new(StorageKey::Intents),
             metadata: MtContractMetadata {
                 spec: "mt-1.0.0".to_string(),
-                name: name.unwrap_or_else(|| "Dead Route Camp Commodities".to_string()),
+                name: name.unwrap_or_else(|| "Death Route Camp Commodities".to_string()),
                 symbol: symbol.unwrap_or_else(|| "CAMP".to_string()),
                 icon: None,
                 base_uri: None,

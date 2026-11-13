@@ -1,4 +1,4 @@
-# The Camp Market: Dead Route's economy
+# The Camp Market: Death Route's economy
 
 The Survivor Camp is the market town. The survivors who run its stalls are agent merchants with
 their own NEAR wallets. Everything a courier scavenges on a route is a commodity those merchants

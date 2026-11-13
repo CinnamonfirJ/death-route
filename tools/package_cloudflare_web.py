@@ -49,7 +49,7 @@ def package(source: Path, output: Path) -> None:
     # Disable Pages' SPA fallback so a missing asset or API returns a real 404.
     (output / "404.html").write_text(
         '<!doctype html><meta charset="utf-8"><title>Page not found</title>'
-        '<h1>Page not found</h1><a href="/">Back to Dead Route</a>',
+        '<h1>Page not found</h1><a href="/">Back to Death Route</a>',
         encoding="utf-8",
     )
     for asset in output.iterdir():

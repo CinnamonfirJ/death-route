@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 rust-version = "1.94"
 resolver = "3"
-description = "Dead Route Camp Commodities: one NEP-245 multi-token contract for every camp market good."
+description = "Death Route Camp Commodities: one NEP-245 multi-token contract for every camp market good."
 license = "MIT"
 publish = false
 

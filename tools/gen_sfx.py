@@ -1,4 +1,4 @@
-"""Synthesizes Dead Route's sound effects and score as 16-bit mono WAVs.
+"""Synthesizes Death Route's sound effects and score as 16-bit mono WAVs.
 
 Usage:  python -I tools/gen_sfx.py assets/audio [names...]
 Everything here is generated from scratch (no samples), so it's free to ship.

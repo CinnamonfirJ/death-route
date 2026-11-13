@@ -1,4 +1,4 @@
-# Dead Route — Camp Market pricing rules
+# Death Route — Camp Market pricing rules
 #
 # This is the ONLY place the economy is tuned. The wallet bridge loads it at start-up
 # (wallet-bridge/market.mjs) and every price, tooltip line, and bankruptcy decision the
