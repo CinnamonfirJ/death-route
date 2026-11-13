@@ -22,26 +22,8 @@ var _web_logout_callback: JavaScriptObject
 const ENTITLEMENT_CACHE_MS := 600_000
 
 
-func _ready() -> void:
-	if _same_origin_web():
-		busy = true
-		message = "Checking your sign-in…"
-		_web_session_callback = JavaScriptBridge.create_callback(_restore_web_session)
-		JavaScriptBridge.get_interface("window").deadRouteReadWebSession(_web_session_callback)
-
-
-func _restore_web_session(args: Array) -> void:
-	_web_session_callback = null
-	if _attempt != 0:
-		return
-	var result: Variant = JSON.parse_string(str(args[0]))
-	if result is Dictionary and result.get("signed_in", false) and not str(result.get("session", "")).is_empty():
-		_accept_session(_configured_bridge(), result)
-	else:
-		_finish("")
-
-
-func _configured_bridge() -> String:
+## The bridge serves sign-in, entitlement, and the camp market. Empty when this build has none.
+func bridge_url() -> String:
 	var bridge := OS.get_environment("DEAD_ROUTE_WALLET_URL")
 	if bridge.is_empty():
 		bridge = str(ProjectSettings.get_setting_with_override("dead_route/wallet/bridge_url"))
@@ -59,7 +41,21 @@ func sign_in() -> void:
 	if bridge.is_empty() and not OS.has_feature("web") and not OS.has_feature("mobile"):
 		bridge = "http://127.0.0.1:8787"
 	if not bridge.begins_with("https://") and bridge != "http://127.0.0.1:8787":
-		_finish("Google sign-in is unavailable right now. You can play as a guest.")
+		return ""
+	return bridge
+
+
+## Opaque bridge session for market calls. Empty for guests.
+func session_token() -> String:
+	return _session
+
+
+func sign_in(method := "google") -> void:
+	if busy:
+		return
+	var bridge := bridge_url()
+	if bridge.is_empty():
+		_finish("A wallet bridge URL is required in this build.")
 		return
 	_attempt += 1
 	var attempt := _attempt

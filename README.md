@@ -13,12 +13,17 @@ Scrap comes from loot, jobs, and survivor or rival outcomes. A successful run ba
 | Pizza pickup and handoff | [`PizzaCargo._try_interaction()`](scripts/pickups/pizza_cargo.gd) checks the carrier and interaction distance. The host runs this check in co-op. |
 | Successful route completion | [`Location.finish_route()`](scripts/locations/location.gd) checks that the pizza was handed over and every job is done. [`Net.end_run()`](scripts/autoload/net.gd) broadcasts the result in co-op. |
 | Local scrap and run history | [`GameManager.end_run()`](scripts/autoload/game_manager.gd) calculates banked scrap, updates the summary, and saves on each player's machine. |
+| Supply crates and the camp haul | [`Location._place_crates()`](scripts/locations/location.gd) drops crates at decoy pizza spots. [`Pickup.apply_to()`](scripts/pickups/pickup.gd) adds them to the run haul, and `GameManager.end_run()` banks them (half on failure) and mints a Pizza Delivery Contract for a completed delivery. [`CampMarket`](scripts/autoload/market_session.gd) reports the haul to the bridge. |
 
 ## Google sign-in
 
 Players can sign in with Google or play as guests. The [account setup guide](AUTH_SETUP.md) covers Google configuration, background NEAR account provisioning, and automatic access to the locked shotgun for the account that owns it.
 
 Shop uses local scrap. Earn shows completed deliveries and explains how to earn scrap. On-chain rewards require a rewards contract and a service that verifies completed runs.
+
+## Camp market and NEP-245 commodities
+
+Supply crates found on a route (at pizza spots that turned out empty) and every finished delivery become **camp commodities**: token ids on the [Camp Commodities NEP-245 contract](contracts/camp-commodities). Back in the Garage, the **Market** tab sells them to the camp's merchant NPCs, whose prices and reasoning come from one readable file, [`economy/pricing_rules.toml`](economy/pricing_rules.toml). The wallet bridge runs the market and mirrors balances on-chain through the relayer, so the player only ever clicks Sell or Buy. [ECONOMY.md](ECONOMY.md) has the design, the requirement mapping, and a three-minute judge demo including the **Fast-forward 7 days** mode.
 
 ## Gameplay tuning
 

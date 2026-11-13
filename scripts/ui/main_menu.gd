@@ -90,12 +90,22 @@ func _show_shop() -> void:
 func _show_earn() -> void:
 	_open("EARN")
 	_copy("%d deliveries completed" % GameManager.stats.successful_runs, AMBER)
+<<<<<<< Updated upstream
 	_copy("Complete deliveries to earn scrap for garage upgrades.")
 	_close_button()
 
 
 func _show_account() -> void:
 	_open("ACCOUNT")
+=======
+	_copy("Finish deliveries to bank scrap and camp commodities. Sell them at the camp market in the Garage.")
+	_button(_panel, "OPEN GARAGE", GameManager.goto_garage, true)
+	_close_button()
+
+
+func _show_wallet() -> void:
+	_open("SIGN IN")
+>>>>>>> Stashed changes
 	_status = _copy("")
 	_account_actions = VBoxContainer.new()
 	_account_actions.add_theme_constant_override(&"separation", 5)
@@ -110,7 +120,13 @@ func _show_settings() -> void:
 	_close_button()
 
 
+<<<<<<< Updated upstream
 func _refresh_account() -> void:
+=======
+## Google or guest. The NEAR account behind a Google sign-in is never shown: the chain stays invisible.
+func _refresh_wallet() -> void:
+	_wallet.text = "SIGNED IN" if WalletSession.signed_in else "SIGN IN WITH GOOGLE"
+>>>>>>> Stashed changes
 	if not is_instance_valid(_status):
 		return
 	for child in _account_actions.get_children():
@@ -119,6 +135,7 @@ func _refresh_account() -> void:
 	if WalletSession.busy:
 		_status.text = WalletSession.message
 		if not WalletSession.browser_url.is_empty():
+<<<<<<< Updated upstream
 			_button(_account_actions, "OPEN SIGN-IN PAGE", WalletSession.open_browser, true)
 		if not OS.has_feature("web"):
 			_button(_account_actions, "CANCEL SIGN-IN", WalletSession.cancel_sign_in)
@@ -130,6 +147,25 @@ func _refresh_account() -> void:
 		_status.text = WalletSession.message if not WalletSession.message.is_empty() else "Sign in with Google or play as a guest."
 		_button(_account_actions, "SIGN IN WITH GOOGLE", WalletSession.sign_in, true)
 		_button(_account_actions, "PLAY AS GUEST", GameManager.goto_garage)
+=======
+			_button(_wallet_actions, "OPEN SIGN-IN PAGE", WalletSession.open_browser, true)
+		_button(_wallet_actions, "CANCEL SIGN-IN", WalletSession.cancel_sign_in)
+	elif WalletSession.signed_in:
+		_status.text = "Signed in with Google. Your camp haul and market trades follow this account."
+		_button(_wallet_actions, "PLAY", GameManager.goto_garage, true)
+		_button(_wallet_actions, "SIGN OUT", WalletSession.sign_out)
+	else:
+		_status.text = "Sign in with Google to keep your camp haul across devices, or play as a guest."
+		if not WalletSession.message.is_empty():
+			_status.text = WalletSession.message
+		_button(_wallet_actions, "CONTINUE WITH GOOGLE", WalletSession.sign_in.bind("google"), true)
+		_button(_wallet_actions, "PLAY AS GUEST", _play_as_guest)
+
+
+func _play_as_guest() -> void:
+	WalletSession.sign_out()
+	GameManager.goto_garage()
+>>>>>>> Stashed changes
 
 
 func _open(title: String) -> void:

@@ -57,6 +57,12 @@ func show_summary(summary: Dictionary) -> void:
 		if bad > 0:
 			line += "\n...and %d infected. The camp is having a bad night." % bad
 		lines.append(line)
+	var haul: Dictionary = summary.get("haul", {})
+	if not haul.is_empty():
+		var parts: Array[String] = []
+		for id in haul:
+			parts.append("%d %s" % [int(haul[id]), GameManager.commodity_name(str(id), int(haul[id]))])
+		lines.append("Camp haul: %s%s" % [", ".join(parts), "" if success else "  (half: you died)"])
 	if summary.has("rival"):
 		lines.append(summary.rival)
 	details.text = "\n".join(lines)

@@ -66,6 +66,8 @@ signal rival_stopped(rival_name: String, scrap: int)
 signal run_started(location_id: StringName)
 signal run_ended(success: bool, scrap_earned: int)
 signal scrap_collected(amount: int)
+## A supply crate was picked up: `commodity` is a camp market id (see GameManager.COMMODITIES).
+signal commodity_collected(commodity: String, amount: int)
 signal currency_changed(total: int)
 signal upgrade_purchased(upgrade_id: StringName, new_level: int)
 
