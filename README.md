@@ -14,11 +14,11 @@ Scrap comes from loot, jobs, and survivor or rival outcomes. A successful run ba
 | Successful route completion | [`Location.finish_route()`](scripts/locations/location.gd) checks that the pizza was handed over and every job is done. [`Net.end_run()`](scripts/autoload/net.gd) broadcasts the result in co-op. |
 | Local scrap and run history | [`GameManager.end_run()`](scripts/autoload/game_manager.gd) calculates banked scrap, updates the summary, and saves on each player's machine. |
 
-## Google sign-in and NEAR wallet
+## Google sign-in
 
-Use the [account setup guide](AUTH_SETUP.md) to configure Google, connect MyNearWallet, and point the bridge at the minted shotgun NFT. The wallet holding that NFT can select the shotgun in the Garage. The other game modes and weapons are available to guests.
+Players can sign in with Google or play as guests. The [account setup guide](AUTH_SETUP.md) covers Google configuration, background NEAR account provisioning, and automatic access to the locked shotgun for the account that owns it.
 
-Shop uses local scrap. Earn shows completed deliveries and wallet status. NEAR purchases and reward claims require a separate contract and verified run service.
+Shop uses local scrap. Earn shows completed deliveries and explains how to earn scrap. On-chain rewards require a rewards contract and a service that verifies completed runs.
 
 ## Gameplay tuning
 

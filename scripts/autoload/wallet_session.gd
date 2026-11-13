@@ -1,14 +1,12 @@
 extends Node
 ## The browser and bridge handle Google credentials. The game only receives the
-## verified testnet account after the player confirms the pairing code.
+## game session and item access after the player confirms the pairing code.
 
 signal changed
 
-var account_id := ""
 var signed_in := false
 var busy := false
 var message := ""
-var ownership_message := ""
 var browser_url := ""
 var _attempt := 0
 var _bridge := ""
@@ -21,7 +19,7 @@ var _checking := false
 const ENTITLEMENT_CACHE_MS := 600_000
 
 
-func sign_in(method := "google") -> void:
+func sign_in() -> void:
 	if busy:
 		return
 	var bridge := OS.get_environment("DEAD_ROUTE_WALLET_URL")
@@ -31,20 +29,20 @@ func sign_in(method := "google") -> void:
 		bridge = "http://127.0.0.1:8787"
 	bridge = bridge.trim_suffix("/")
 	if not bridge.begins_with("https://") and bridge != "http://127.0.0.1:8787":
-		_finish("A wallet bridge URL is required in this build.")
+		_finish("Google sign-in is unavailable right now. You can play as a guest.")
 		return
 	_attempt += 1
 	var attempt := _attempt
 	busy = true
-	message = "Contacting the wallet service..."
+	message = "Starting Google sign-in..."
 	changed.emit()
-	var flow := await _post(bridge + "/api/device/start", {"method": method})
+	var flow := await _post(bridge + "/api/device/start", {})
 	if attempt != _attempt:
 		return
 	if not flow.has_all(["id", "secret", "code"]):
-		_finish(str(flow.get("error", "The wallet service is offline. See the README for setup.")))
+		_finish("Google sign-in is unavailable right now. You can play as a guest.")
 		return
-	browser_url = bridge + "/wallet?flow=" + str(flow.id).uri_encode()
+	browser_url = bridge + "/signin?flow=" + str(flow.id).uri_encode()
 	if not OS.has_feature("web"):
 		open_browser()
 	message = "Enter code %s in your browser to continue." % str(flow.code)
@@ -62,12 +60,11 @@ func sign_in(method := "google") -> void:
 		if result.get("signed_in", false):
 			_bridge = bridge
 			signed_in = true
-			account_id = str(result.get("account_id", ""))
 			_session = str(result.get("session", ""))
 			_read_entitlement(result)
 			_finish("")
 		else:
-			_finish(str(result.get("error", "Could not complete sign-in. Please try again.")))
+			_finish("Could not complete Google sign-in. Try again or play as a guest.")
 		return
 	if attempt == _attempt:
 		_finish("The sign-in code expired. Start a new sign-in.")
@@ -75,10 +72,8 @@ func sign_in(method := "google") -> void:
 
 func sign_out() -> void:
 	signed_in = false
-	account_id = ""
 	_session = ""
 	_owns_shotgun = false
-	ownership_message = ""
 	cancel_sign_in()
 
 
@@ -98,18 +93,22 @@ func refresh_ownership() -> void:
 	_checking = true
 	_last_check = now
 	var token := _session
-	var result := await _post(_bridge + "/api/entitlement", {"session": token})
+	for retry in 6:
+		var result := await _post(_bridge + "/api/entitlement", {"session": token})
+		if token != _session:
+			break
+		if not result.get("pending", false):
+			if result.has("shotgun_owned"):
+				_read_entitlement(result)
+				changed.emit()
+			break
+		await get_tree().create_timer(5.0).timeout
 	_checking = false
-	if token == _session:
-		_read_entitlement(result)
-		changed.emit()
 
 
 func _read_entitlement(result: Dictionary) -> void:
 	_owns_shotgun = result.get("shotgun_owned", false)
 	_ownership_deadline = Time.get_ticks_msec() + ENTITLEMENT_CACHE_MS
-	ownership_message = str(result.get("ownership_message", result.get(
-		"error", "Could not verify shotgun ownership.")))
 
 
 func open_browser() -> void:

@@ -36,7 +36,7 @@ Sfx="*res://scripts/autoload/sfx.gd"
 [dead_route]
 
 wallet/bridge_url=""
-wallet/bridge_url.web="https://deadroute.run"
+wallet/bridge_url.web="https://auth.deathroute.fun"
 network/room_service=""
 
 [display]

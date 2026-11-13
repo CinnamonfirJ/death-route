@@ -8,9 +8,9 @@ var _menu: CenterContainer
 var _overlay: Control
 var _panel: VBoxContainer
 var _play: Button
-var _wallet: Button
+var _account: Button
 var _status: Label
-var _wallet_actions: VBoxContainer
+var _account_actions: VBoxContainer
 var _frame: PanelContainer
 var _footer: VBoxContainer
 var _mobile := false
@@ -46,7 +46,7 @@ func _ready() -> void:
 	var secondary := HBoxContainer.new()
 	secondary.add_theme_constant_override(&"separation", 6)
 	stack.add_child(secondary)
-	_wallet = _button(secondary, "SIGN IN WITH GOOGLE", _show_wallet)
+	_account = _button(secondary, "SIGN IN WITH GOOGLE", _show_account)
 	_button(secondary, "SETTINGS", _show_settings)
 	if FullscreenButton.available():
 		var full := FullscreenButton.new()
@@ -56,8 +56,8 @@ func _ready() -> void:
 		secondary.add_child(full)
 	get_viewport().size_changed.connect(_layout)
 	_layout()
-	WalletSession.changed.connect(_refresh_wallet)
-	_refresh_wallet()
+	WalletSession.changed.connect(_refresh_account)
+	_refresh_account()
 	_play.grab_focus()
 
 
@@ -82,7 +82,7 @@ func _show_scores() -> void:
 func _show_shop() -> void:
 	_open("SHOP")
 	_copy("%d scrap available for garage upgrades." % GameManager.currency, AMBER)
-	_copy("Upgrade your vehicle, weapons, and gear in the garage. NEAR purchases are unavailable.")
+	_copy("Spend scrap on vehicle, weapon, and gear upgrades in the garage.")
 	_button(_panel, "OPEN GARAGE SHOP", GameManager.goto_garage, true).grab_focus()
 	_close_button(false)
 
@@ -90,19 +90,18 @@ func _show_shop() -> void:
 func _show_earn() -> void:
 	_open("EARN")
 	_copy("%d deliveries completed" % GameManager.stats.successful_runs, AMBER)
-	_copy("Complete deliveries to bank scrap. NEAR rewards are unavailable until verified runs and a rewards contract are connected.")
-	_button(_panel, "NEAR WALLET", _show_wallet)
+	_copy("Complete deliveries to earn scrap for garage upgrades.")
 	_close_button()
 
 
-func _show_wallet() -> void:
-	_open("ACCOUNT & WALLET")
+func _show_account() -> void:
+	_open("ACCOUNT")
 	_status = _copy("")
-	_wallet_actions = VBoxContainer.new()
-	_wallet_actions.add_theme_constant_override(&"separation", 5)
-	_panel.add_child(_wallet_actions)
+	_account_actions = VBoxContainer.new()
+	_account_actions.add_theme_constant_override(&"separation", 5)
+	_panel.add_child(_account_actions)
 	_close_button()
-	_refresh_wallet()
+	_refresh_account()
 
 
 func _show_settings() -> void:
@@ -111,37 +110,26 @@ func _show_settings() -> void:
 	_close_button()
 
 
-func _refresh_wallet() -> void:
-	var connected := not WalletSession.account_id.is_empty()
-	_wallet.text = "WALLET CONNECTED" if connected else ("ACCOUNT" if WalletSession.signed_in else "SIGN IN WITH GOOGLE")
+func _refresh_account() -> void:
+	_account.text = "ACCOUNT" if WalletSession.signed_in else "SIGN IN WITH GOOGLE"
 	if not is_instance_valid(_status):
 		return
-	for child in _wallet_actions.get_children():
-		_wallet_actions.remove_child(child)
+	for child in _account_actions.get_children():
+		_account_actions.remove_child(child)
 		child.queue_free()
 	if WalletSession.busy:
 		_status.text = WalletSession.message
 		if not WalletSession.browser_url.is_empty():
-			_button(_wallet_actions, "OPEN SIGN-IN PAGE", WalletSession.open_browser, true)
-		_button(_wallet_actions, "CANCEL SIGN-IN", WalletSession.cancel_sign_in)
-	elif connected:
-		_status.text = "%s\n%s" % [WalletSession.account_id, WalletSession.ownership_message]
-		_button(_wallet_actions, "CHECK SHOTGUN OWNERSHIP", WalletSession.refresh_ownership)
-		_button(_wallet_actions, "SIGN OUT", WalletSession.sign_out)
+			_button(_account_actions, "OPEN SIGN-IN PAGE", WalletSession.open_browser, true)
+		_button(_account_actions, "CANCEL SIGN-IN", WalletSession.cancel_sign_in)
+	elif WalletSession.signed_in:
+		_status.text = "Signed in with Google."
+		_button(_account_actions, "PLAY", GameManager.goto_garage, true)
+		_button(_account_actions, "SIGN OUT", WalletSession.sign_out)
 	else:
-		_status.text = "Google sign-in complete. Connect a wallet to check shotgun ownership." if WalletSession.signed_in \
-			else "Sign in with Google, connect a NEAR wallet, or play as a guest."
-		if not WalletSession.message.is_empty():
-			_status.text = WalletSession.message
-		if not WalletSession.signed_in:
-			_button(_wallet_actions, "CONTINUE WITH GOOGLE", WalletSession.sign_in.bind("google"), true)
-		_button(_wallet_actions, "CONNECT NEAR WALLET", WalletSession.sign_in.bind("wallet"))
-		_button(_wallet_actions, "PLAY AS GUEST", _play_as_guest)
-
-
-func _play_as_guest() -> void:
-	WalletSession.sign_out()
-	GameManager.goto_garage()
+		_status.text = WalletSession.message if not WalletSession.message.is_empty() else "Sign in with Google or play as a guest."
+		_button(_account_actions, "CONTINUE WITH GOOGLE", WalletSession.sign_in, true)
+		_button(_account_actions, "PLAY AS GUEST", GameManager.goto_garage)
 
 
 func _open(title: String) -> void:
